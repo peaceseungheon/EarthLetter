@@ -1,11 +1,15 @@
 // prisma/seed.ts
 //
-// EarthLetter seed — 10 countries × 3 topics × 2–3 English-language RSS feeds.
+// EarthLetter seed — 30 countries × 3 topics × 1–3 English-language RSS feeds.
 //
 // Curation notes:
 // - All feeds are English-language at time of curation.
 // - Feeds marked `// REVIEW:` are not 100% verified as live or topic-pure and
 //   should be validated by QA or replaced before production launch.
+// - Feeds annotated `// state-affiliated` are from state-owned or state-run
+//   outlets and are included for coverage breadth, not endorsement.
+// - Any `placeholder.example` URL is a known-dead stand-in — replace it
+//   before production launch or disable the source via the admin UI.
 // - Source of truth for coverage; adding a country is a seed edit + migrate.
 //
 // Run via: `pnpm prisma:seed` (package.json > prisma.seed → `tsx prisma/seed.ts`).
@@ -33,6 +37,7 @@ interface SourceSeed {
 }
 
 const COUNTRIES: CountrySeed[] = [
+  // --- Original 10 (MVP) ---
   { code: 'US', nameEn: 'United States', nameKo: '미국' },
   { code: 'GB', nameEn: 'United Kingdom', nameKo: '영국' },
   { code: 'CN', nameEn: 'China', nameKo: '중국' },
@@ -42,7 +47,38 @@ const COUNTRIES: CountrySeed[] = [
   { code: 'DE', nameEn: 'Germany', nameKo: '독일' },
   { code: 'FR', nameEn: 'France', nameKo: '프랑스' },
   { code: 'IL', nameEn: 'Israel', nameKo: '이스라엘' },
-  { code: 'IN', nameEn: 'India', nameKo: '인도' }
+  { code: 'IN', nameEn: 'India', nameKo: '인도' },
+
+  // --- Feature G expansion: +20 countries → 30 total ---
+  // Asia-Pacific (+5)
+  { code: 'AU', nameEn: 'Australia', nameKo: '호주' },
+  { code: 'NZ', nameEn: 'New Zealand', nameKo: '뉴질랜드' },
+  { code: 'SG', nameEn: 'Singapore', nameKo: '싱가포르' },
+  { code: 'PH', nameEn: 'Philippines', nameKo: '필리핀' },
+  { code: 'ID', nameEn: 'Indonesia', nameKo: '인도네시아' },
+
+  // Europe (+5)
+  { code: 'IT', nameEn: 'Italy', nameKo: '이탈리아' },
+  { code: 'ES', nameEn: 'Spain', nameKo: '스페인' },
+  { code: 'NL', nameEn: 'Netherlands', nameKo: '네덜란드' },
+  { code: 'PL', nameEn: 'Poland', nameKo: '폴란드' },
+  { code: 'UA', nameEn: 'Ukraine', nameKo: '우크라이나' },
+
+  // Americas (+4)
+  { code: 'CA', nameEn: 'Canada', nameKo: '캐나다' },
+  { code: 'BR', nameEn: 'Brazil', nameKo: '브라질' },
+  { code: 'MX', nameEn: 'Mexico', nameKo: '멕시코' },
+  { code: 'AR', nameEn: 'Argentina', nameKo: '아르헨티나' },
+
+  // Middle East (+3)
+  { code: 'AE', nameEn: 'United Arab Emirates', nameKo: '아랍에미리트' },
+  { code: 'SA', nameEn: 'Saudi Arabia', nameKo: '사우디아라비아' },
+  { code: 'TR', nameEn: 'Turkey', nameKo: '튀르키예' },
+
+  // Africa (+3)
+  { code: 'ZA', nameEn: 'South Africa', nameKo: '남아프리카 공화국' },
+  { code: 'NG', nameEn: 'Nigeria', nameKo: '나이지리아' },
+  { code: 'EG', nameEn: 'Egypt', nameKo: '이집트' }
 ]
 
 const TOPICS: TopicSeed[] = [
@@ -432,6 +468,410 @@ const SOURCES: SourceSeed[] = [
     topicSlug: 'politics',
     name: 'NDTV — India',
     feedUrl: 'https://feeds.feedburner.com/ndtvnews-india-news'
+  },
+
+  // ==========================================================
+  // Feature G — 20 new countries (3+ sources each, all English)
+  // ==========================================================
+
+  // ---------- Australia ----------
+  {
+    countryCode: 'AU',
+    topicSlug: 'military',
+    name: 'ABC News Australia — Defence',
+    feedUrl: 'https://www.abc.net.au/news/feed/51120/rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AU',
+    topicSlug: 'economy',
+    name: 'ABC News Australia — Business',
+    feedUrl: 'https://www.abc.net.au/news/feed/51892/rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AU',
+    topicSlug: 'politics',
+    name: 'The Sydney Morning Herald — Federal Politics',
+    feedUrl: 'https://www.smh.com.au/rss/politics/federal.xml' // REVIEW: verify URL
+  },
+
+  // ---------- New Zealand ----------
+  {
+    countryCode: 'NZ',
+    topicSlug: 'military',
+    name: 'RNZ — National',
+    feedUrl: 'https://www.rnz.co.nz/rss/national.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NZ',
+    topicSlug: 'economy',
+    name: 'RNZ — Business',
+    feedUrl: 'https://www.rnz.co.nz/rss/business.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NZ',
+    topicSlug: 'politics',
+    name: 'RNZ — Politics',
+    feedUrl: 'https://www.rnz.co.nz/rss/political.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Singapore ----------
+  {
+    countryCode: 'SG',
+    topicSlug: 'military',
+    name: 'The Straits Times — Singapore',
+    feedUrl: 'https://www.straitstimes.com/news/singapore/rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'SG',
+    topicSlug: 'economy',
+    name: 'Channel NewsAsia — Business',
+    feedUrl: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6936' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'SG',
+    topicSlug: 'politics',
+    name: 'Channel NewsAsia — Singapore',
+    feedUrl: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416' // REVIEW: verify URL
+  },
+
+  // ---------- Philippines ----------
+  {
+    countryCode: 'PH',
+    topicSlug: 'military',
+    name: 'Rappler — Nation',
+    feedUrl: 'https://www.rappler.com/nation/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'PH',
+    topicSlug: 'economy',
+    name: 'Philippine Daily Inquirer — Business',
+    feedUrl: 'https://business.inquirer.net/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'PH',
+    topicSlug: 'politics',
+    name: 'Rappler — Philippine Politics',
+    feedUrl: 'https://www.rappler.com/nation/politics/feed/' // REVIEW: verify URL
+  },
+
+  // ---------- Indonesia ----------
+  {
+    countryCode: 'ID',
+    topicSlug: 'military',
+    name: 'The Jakarta Post — National',
+    feedUrl: 'https://www.thejakartapost.com/rss/national' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ID',
+    topicSlug: 'economy',
+    name: 'The Jakarta Post — Business',
+    feedUrl: 'https://www.thejakartapost.com/rss/business' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ID',
+    topicSlug: 'politics',
+    name: 'Antara News — Politics', // state-affiliated
+    feedUrl: 'https://en.antaranews.com/rss/politics.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Italy ----------
+  {
+    countryCode: 'IT',
+    topicSlug: 'military',
+    name: 'ANSA English — News', // state-affiliated
+    feedUrl: 'https://www.ansa.it/english/english_rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'IT',
+    topicSlug: 'economy',
+    name: 'ANSA English — Business', // state-affiliated
+    feedUrl: 'https://www.ansa.it/english/news/business/business_rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'IT',
+    topicSlug: 'politics',
+    name: 'ANSA English — Politics', // state-affiliated
+    feedUrl: 'https://www.ansa.it/english/news/politics/politics_rss.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Spain ----------
+  {
+    countryCode: 'ES',
+    topicSlug: 'military',
+    name: 'El País English — Spain',
+    feedUrl: 'https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/portada' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ES',
+    topicSlug: 'economy',
+    name: 'El País English — Economy',
+    feedUrl: 'https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/section/economy-and-business' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ES',
+    topicSlug: 'politics',
+    name: 'El País English — Politics',
+    feedUrl: 'https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/section/spain' // REVIEW: verify URL
+  },
+
+  // ---------- Netherlands ----------
+  {
+    countryCode: 'NL',
+    topicSlug: 'military',
+    name: 'DutchNews.nl — News',
+    feedUrl: 'https://www.dutchnews.nl/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NL',
+    topicSlug: 'economy',
+    name: 'NL Times — Business',
+    feedUrl: 'https://nltimes.nl/business/rss' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NL',
+    topicSlug: 'politics',
+    name: 'NL Times — Politics',
+    feedUrl: 'https://nltimes.nl/politics/rss' // REVIEW: verify URL
+  },
+
+  // ---------- Poland ----------
+  {
+    countryCode: 'PL',
+    topicSlug: 'military',
+    name: 'Notes from Poland — News',
+    feedUrl: 'https://notesfrompoland.com/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'PL',
+    topicSlug: 'economy',
+    name: 'PolandIn — Business',
+    feedUrl: 'https://polandin.com/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'PL',
+    topicSlug: 'politics',
+    name: 'TVP World — Poland', // state-affiliated
+    feedUrl: 'https://tvpworld.com/rss/poland.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Ukraine ----------
+  {
+    countryCode: 'UA',
+    topicSlug: 'military',
+    name: 'Kyiv Independent — War',
+    feedUrl: 'https://kyivindependent.com/rss/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'UA',
+    topicSlug: 'economy',
+    name: 'Kyiv Post — Business',
+    feedUrl: 'https://www.kyivpost.com/business/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'UA',
+    topicSlug: 'politics',
+    name: 'Ukrinform — Politics', // state-affiliated
+    feedUrl: 'https://www.ukrinform.net/rss/block-lastnews' // REVIEW: verify URL
+  },
+
+  // ---------- Canada ----------
+  {
+    countryCode: 'CA',
+    topicSlug: 'military',
+    name: 'CBC News — Politics',
+    feedUrl: 'https://www.cbc.ca/webfeed/rss/rss-politics' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'CA',
+    topicSlug: 'economy',
+    name: 'CBC News — Business',
+    feedUrl: 'https://www.cbc.ca/webfeed/rss/rss-business'
+  },
+  {
+    countryCode: 'CA',
+    topicSlug: 'politics',
+    name: 'The Globe and Mail — Politics',
+    feedUrl: 'https://www.theglobeandmail.com/arc/outboundfeeds/rss/category/politics/?outputType=xml' // REVIEW: verify URL
+  },
+
+  // ---------- Brazil ----------
+  {
+    countryCode: 'BR',
+    topicSlug: 'military',
+    name: 'The Brazilian Report — News',
+    feedUrl: 'https://brazilian.report/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'BR',
+    topicSlug: 'economy',
+    name: 'Reuters — Brazil Business',
+    feedUrl: 'https://www.reutersagency.com/feed/?best-regions=latin-america&post_type=best' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'BR',
+    topicSlug: 'politics',
+    name: 'Agência Brasil — Politics', // state-affiliated
+    feedUrl: 'https://agenciabrasil.ebc.com.br/rss/politica/feed.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Mexico ----------
+  {
+    countryCode: 'MX',
+    topicSlug: 'military',
+    name: 'Mexico News Daily — News',
+    feedUrl: 'https://mexiconewsdaily.com/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'MX',
+    topicSlug: 'economy',
+    name: 'Mexico News Daily — Business',
+    feedUrl: 'https://mexiconewsdaily.com/business/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'MX',
+    topicSlug: 'politics',
+    name: 'Mexico News Daily — Politics',
+    feedUrl: 'https://mexiconewsdaily.com/politics/feed/' // REVIEW: verify URL
+  },
+
+  // ---------- Argentina ----------
+  {
+    countryCode: 'AR',
+    topicSlug: 'military',
+    name: 'Buenos Aires Times — News',
+    feedUrl: 'https://www.batimes.com.ar/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AR',
+    topicSlug: 'economy',
+    name: 'Buenos Aires Times — Economy',
+    feedUrl: 'https://www.batimes.com.ar/economy/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AR',
+    topicSlug: 'politics',
+    name: 'Buenos Aires Times — Politics',
+    feedUrl: 'https://www.batimes.com.ar/politics/feed' // REVIEW: verify URL
+  },
+
+  // ---------- United Arab Emirates ----------
+  {
+    countryCode: 'AE',
+    topicSlug: 'military',
+    name: 'The National — UAE',
+    feedUrl: 'https://www.thenationalnews.com/rss/uae' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AE',
+    topicSlug: 'economy',
+    name: 'The National — Business',
+    feedUrl: 'https://www.thenationalnews.com/rss/business' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'AE',
+    topicSlug: 'politics',
+    name: 'Gulf News — UAE',
+    feedUrl: 'https://gulfnews.com/rss?path=/uae' // REVIEW: verify URL
+  },
+
+  // ---------- Saudi Arabia ----------
+  {
+    countryCode: 'SA',
+    topicSlug: 'military',
+    name: 'Arab News — Saudi Arabia', // state-affiliated
+    feedUrl: 'https://www.arabnews.com/rss.xml' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'SA',
+    topicSlug: 'economy',
+    name: 'Arab News — Economy', // state-affiliated
+    feedUrl: 'https://www.arabnews.com/economy/rss' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'SA',
+    topicSlug: 'politics',
+    name: 'Al Arabiya English — News', // state-affiliated
+    feedUrl: 'https://english.alarabiya.net/.mrss/en/News.xml' // REVIEW: verify URL
+  },
+
+  // ---------- Turkey ----------
+  {
+    countryCode: 'TR',
+    topicSlug: 'military',
+    name: 'Daily Sabah — Türkiye',
+    feedUrl: 'https://www.dailysabah.com/rssFeed/7' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'TR',
+    topicSlug: 'economy',
+    name: 'Hürriyet Daily News — Economy',
+    feedUrl: 'https://www.hurriyetdailynews.com/rss/economy' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'TR',
+    topicSlug: 'politics',
+    name: 'Anadolu Agency — Politics', // state-affiliated
+    feedUrl: 'https://www.aa.com.tr/en/rss/default?cat=politics' // REVIEW: verify URL
+  },
+
+  // ---------- South Africa ----------
+  {
+    countryCode: 'ZA',
+    topicSlug: 'military',
+    name: 'Daily Maverick — South Africa',
+    feedUrl: 'https://www.dailymaverick.co.za/section/south-africa/feed/' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ZA',
+    topicSlug: 'economy',
+    name: 'News24 — Business',
+    feedUrl: 'https://feeds.news24.com/articles/fin24/Business/rss' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'ZA',
+    topicSlug: 'politics',
+    name: 'Daily Maverick — Politics',
+    feedUrl: 'https://www.dailymaverick.co.za/section/politics/feed/' // REVIEW: verify URL
+  },
+
+  // ---------- Nigeria ----------
+  {
+    countryCode: 'NG',
+    topicSlug: 'military',
+    name: 'Premium Times — News',
+    feedUrl: 'https://www.premiumtimesng.com/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NG',
+    topicSlug: 'economy',
+    name: 'Premium Times — Business',
+    feedUrl: 'https://www.premiumtimesng.com/business/feed' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'NG',
+    topicSlug: 'politics',
+    name: 'Premium Times — Politics',
+    feedUrl: 'https://www.premiumtimesng.com/news/top-news/feed' // REVIEW: verify URL
+  },
+
+  // ---------- Egypt ----------
+  {
+    countryCode: 'EG',
+    topicSlug: 'military',
+    name: 'Ahram Online — Egypt', // state-affiliated
+    feedUrl: 'https://english.ahram.org.eg/rss/1.aspx' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'EG',
+    topicSlug: 'economy',
+    name: 'Ahram Online — Business', // state-affiliated
+    feedUrl: 'https://english.ahram.org.eg/rss/3.aspx' // REVIEW: verify URL
+  },
+  {
+    countryCode: 'EG',
+    topicSlug: 'politics',
+    name: 'Egypt Independent — News',
+    feedUrl: 'https://egyptindependent.com/feed/' // REVIEW: verify URL
   }
 ]
 
