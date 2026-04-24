@@ -6,7 +6,7 @@
 import { PrismaClient } from '@prisma/client'
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __earthletter_prisma__: PrismaClient | undefined
 }
 
@@ -16,7 +16,7 @@ export const prisma: PrismaClient =
     log:
       process.env.NODE_ENV === 'development'
         ? ['warn', 'error']
-        : ['error'],
+        : ['error']
   })
 
 if (process.env.NODE_ENV !== 'production') {

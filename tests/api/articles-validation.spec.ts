@@ -55,7 +55,7 @@ describe('/api/articles query validation', () => {
       country: 'US',
       topic: 'politics',
       page: 1,
-      pageSize: 20,
+      pageSize: 20
     })
   })
 
@@ -72,11 +72,11 @@ describe('/api/articles query validation', () => {
   it('rejects non-alpha-2 country', () => {
     expect(validate({ country: 'USA', topic: 'economy' })).toEqual({
       ok: false,
-      reason: 'country',
+      reason: 'country'
     })
     expect(validate({ country: '1', topic: 'economy' })).toEqual({
       ok: false,
-      reason: 'country',
+      reason: 'country'
     })
   })
 
@@ -111,7 +111,7 @@ describe('/api/articles query validation', () => {
       country: 'US',
       topic: 'economy',
       page: '2',
-      pageSize: '10',
+      pageSize: '10'
     })
     expect(r.ok && r.page).toBe(2)
     expect(r.ok && r.pageSize).toBe(10)

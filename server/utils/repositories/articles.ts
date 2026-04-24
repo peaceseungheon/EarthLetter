@@ -35,8 +35,8 @@ function toArticleDTO(a: ArticleWithSource): ArticleDTO {
       id: a.source.id,
       name: a.source.name,
       countryCode: a.source.countryCode,
-      topicSlug: a.source.topicSlug as TopicSlug,
-    },
+      topicSlug: a.source.topicSlug as TopicSlug
+    }
   }
 }
 
@@ -45,7 +45,7 @@ export async function findArticles(
 ): Promise<FindArticlesResult> {
   const { country, topic, page, pageSize } = params
   const where: Prisma.ArticleWhereInput = {
-    source: { countryCode: country, topicSlug: topic, enabled: true },
+    source: { countryCode: country, topicSlug: topic, enabled: true }
   }
 
   const [total, rows] = await Promise.all([
@@ -55,13 +55,13 @@ export async function findArticles(
       include: { source: true },
       orderBy: { publishedAt: 'desc' },
       skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
+      take: pageSize
+    })
   ])
 
   return {
     total,
-    items: rows.map(toArticleDTO),
+    items: rows.map(toArticleDTO)
   }
 }
 
@@ -75,7 +75,7 @@ export async function findLatestAcrossSources(
     where: { source: { enabled: true } },
     include: { source: true },
     orderBy: { publishedAt: 'desc' },
-    take,
+    take
   })
   return rows.map(toArticleDTO)
 }
@@ -103,7 +103,7 @@ export async function upsertArticle(
 ): Promise<UpsertArticleResult> {
   const existing = await prisma.article.findUnique({
     where: { id: input.id },
-    select: { id: true },
+    select: { id: true }
   })
 
   await prisma.article.upsert({
@@ -115,14 +115,14 @@ export async function upsertArticle(
       summary: input.summary ?? null,
       link: input.link,
       imageUrl: input.imageUrl ?? null,
-      publishedAt: input.publishedAt,
+      publishedAt: input.publishedAt
     },
     update: {
       title: input.title,
       summary: input.summary ?? null,
       imageUrl: input.imageUrl ?? null,
-      publishedAt: input.publishedAt,
-    },
+      publishedAt: input.publishedAt
+    }
   })
 
   return { kind: existing ? 'updated' : 'inserted' }
@@ -138,7 +138,7 @@ export async function pruneOlderThan(days: number): Promise<{
 }> {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
   const result = await prisma.article.deleteMany({
-    where: { publishedAt: { lt: cutoff } },
+    where: { publishedAt: { lt: cutoff } }
   })
   return { deleted: result.count, cutoff }
 }

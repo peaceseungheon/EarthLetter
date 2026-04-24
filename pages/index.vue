@@ -9,7 +9,7 @@ useSiteSeo({
   title: 'EarthLetter — World news by country',
   description:
     'Click a country on the world map to read curated English-language news on military, economy, and politics.',
-  ogType: 'website',
+  ogType: 'website'
 })
 
 const router = useRouter()

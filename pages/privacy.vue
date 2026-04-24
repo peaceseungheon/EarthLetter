@@ -3,7 +3,7 @@ useSiteSeo({
   title: 'Privacy Policy — EarthLetter',
   description:
     'What EarthLetter collects, what it does not, and how third-party advertising affects your visit.',
-  ogType: 'website',
+  ogType: 'website'
 })
 </script>
 

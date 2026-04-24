@@ -32,8 +32,8 @@ export function requireIngestSecret(event: H3Event): void {
       data: {
         statusCode: 500,
         statusMessage: 'INTERNAL_ERROR',
-        message: 'Server auth is not configured.',
-      },
+        message: 'Server auth is not configured.'
+      }
     })
   }
 
@@ -48,8 +48,8 @@ export function requireIngestSecret(event: H3Event): void {
       data: {
         statusCode: 401,
         statusMessage: 'UNAUTHORIZED',
-        message: 'Missing or invalid bearer token.',
-      },
+        message: 'Missing or invalid bearer token.'
+      }
     })
   }
 }

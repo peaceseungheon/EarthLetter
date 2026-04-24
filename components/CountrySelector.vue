@@ -14,7 +14,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {
   clickableOnly: true,
-  label: 'Or search for a country',
+  label: 'Or search for a country'
 })
 
 const emit = defineEmits<{ select: [code: string] }>()

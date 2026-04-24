@@ -9,7 +9,7 @@ import { sha256 } from '../hash'
 import { fetchFeed, parallel } from '../rss'
 import {
   upsertArticle,
-  type UpsertArticleInput,
+  type UpsertArticleInput
 } from '../repositories/articles'
 import { listEnabledSources } from '../repositories/sources'
 
@@ -44,7 +44,7 @@ export async function runIngestion(): Promise<IngestResponseDTO> {
           summary: item.contentSnippet,
           link,
           imageUrl: item.enclosureUrl,
-          publishedAt: item.publishedAt,
+          publishedAt: item.publishedAt
         }
 
         try {
@@ -61,7 +61,7 @@ export async function runIngestion(): Promise<IngestResponseDTO> {
       failedSources.push({
         sourceId: source.id,
         feedUrl: source.feedUrl,
-        error: err instanceof Error ? err.message : 'fetch failed',
+        error: err instanceof Error ? err.message : 'fetch failed'
       })
       return null
     }
@@ -79,6 +79,6 @@ export async function runIngestion(): Promise<IngestResponseDTO> {
     inserted,
     updated,
     failedSources,
-    durationMs: Date.now() - startedAt,
+    durationMs: Date.now() - startedAt
   }
 }

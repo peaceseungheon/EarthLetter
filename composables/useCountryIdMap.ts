@@ -101,7 +101,7 @@ export const NUMERIC_TO_ALPHA2: Readonly<Record<string, string>> = Object.freeze
   '246': 'FI', // Finland
   '268': 'GE', // Georgia
   '288': 'GH', // Ghana
-  '320': 'GT', // Guatemala
+  '320': 'GT' // Guatemala
 })
 
 /**

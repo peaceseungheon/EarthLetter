@@ -24,18 +24,18 @@ export const useCountriesStore = defineStore('countries', {
   getters: {
     byCode:
       (state) =>
-      (code: string): CountryDTO | null => {
-        if (!code) return null
-        const target = code.toUpperCase()
-        return state.items.find((c) => c.code === target) ?? null
-      },
+        (code: string): CountryDTO | null => {
+          if (!code) return null
+          const target = code.toUpperCase()
+          return state.items.find((c) => c.code === target) ?? null
+        },
     clickable: (state): CountryDTO[] => state.items.filter((c) => c.hasSources),
     totalSourcesCovered: (state): number =>
       state.items.reduce((sum, c) => sum + c.sourceCount, 0),
     isStale:
       (state) =>
-      (ttlMs: number = STALE_MS): boolean =>
-        state.lastFetched === null || Date.now() - state.lastFetched > ttlMs
+        (ttlMs: number = STALE_MS): boolean =>
+          state.lastFetched === null || Date.now() - state.lastFetched > ttlMs
   },
 
   actions: {

@@ -16,10 +16,10 @@ export async function listCountriesWithHasSources(): Promise<CountryDTO[]> {
     include: {
       _count: {
         select: {
-          sources: { where: { enabled: true } },
-        },
-      },
-    },
+          sources: { where: { enabled: true } }
+        }
+      }
+    }
   })
 
   return countries.map((c) => {
@@ -29,7 +29,7 @@ export async function listCountriesWithHasSources(): Promise<CountryDTO[]> {
       nameEn: c.nameEn,
       nameKo: c.nameKo ?? null,
       hasSources: sourceCount > 0,
-      sourceCount,
+      sourceCount
     }
   })
 }
@@ -37,7 +37,7 @@ export async function listCountriesWithHasSources(): Promise<CountryDTO[]> {
 export async function countryExists(code: string): Promise<boolean> {
   const row = await prisma.country.findUnique({
     where: { code },
-    select: { code: true },
+    select: { code: true }
   })
   return row !== null
 }

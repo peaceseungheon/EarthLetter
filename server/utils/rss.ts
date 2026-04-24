@@ -26,8 +26,8 @@ const parser = new Parser({
   headers: {
     'User-Agent':
       'EarthLetterBot/0.1 (+https://github.com/ — news aggregation; contact via site)',
-    Accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5',
-  },
+    Accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5'
+  }
 })
 
 /**
@@ -49,8 +49,8 @@ export async function fetchFeed(
         'User-Agent':
           'EarthLetterBot/0.1 (+https://github.com/ — news aggregation; contact via site)',
         Accept:
-          'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5',
-      },
+          'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5'
+      }
     })
 
     if (!res.ok) {
@@ -92,7 +92,7 @@ export async function fetchFeed(
         link,
         contentSnippet: snippet ? snippet.slice(0, 500) : null,
         enclosureUrl,
-        publishedAt: published,
+        publishedAt: published
       })
     }
 

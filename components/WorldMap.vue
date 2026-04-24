@@ -10,7 +10,7 @@ import type {
   Feature,
   FeatureCollection,
   Geometry,
-  GeoJsonProperties,
+  GeoJsonProperties
 } from 'geojson'
 import type { Topology } from 'topojson-specification'
 import type { CountryDTO } from '~/types/dto'
@@ -25,7 +25,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {
   width: 960,
-  height: 500,
+  height: 500
 })
 
 const emit = defineEmits<{

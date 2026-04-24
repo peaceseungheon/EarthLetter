@@ -34,7 +34,7 @@ const topicResults = await Promise.all(
     const { data } = await useFetch<ArticlesResponseDTO>('/api/articles', {
       key: `country-${rawCode}-${topic}-top5`,
       query: { country: rawCode, topic, page: 1, pageSize: 5 },
-      server: true,
+      server: true
     })
     return { topic, items: data.value?.items ?? [] }
   })
@@ -43,7 +43,7 @@ const topicResults = await Promise.all(
 useSiteSeo({
   title: `${country.value.nameEn} — EarthLetter`,
   description: `Latest military, economy, and politics news for ${country.value.nameEn}.`,
-  ogType: 'website',
+  ogType: 'website'
 })
 </script>
 

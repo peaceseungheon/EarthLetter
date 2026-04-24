@@ -3,7 +3,7 @@ useSiteSeo({
   title: 'Terms of Use — EarthLetter',
   description:
     'Terms governing your use of EarthLetter — acceptable use, disclaimers, and liability.',
-  ogType: 'website',
+  ogType: 'website'
 })
 </script>
 

@@ -21,7 +21,7 @@ test('home renders heading + map + CountrySelector', async ({ page }) => {
 })
 
 test('country/topic page renders an article list or empty state', async ({
-  page,
+  page
 }) => {
   // US / politics is in the launch seed.
   await page.goto('/country/US/politics')
@@ -38,7 +38,7 @@ test('country/topic page renders an article list or empty state', async ({
 
 test('unknown country 404s via route middleware', async ({ page }) => {
   const response = await page.goto('/country/ZZZ/politics', {
-    waitUntil: 'domcontentloaded',
+    waitUntil: 'domcontentloaded'
   })
   expect(response?.status()).toBeGreaterThanOrEqual(400)
 })

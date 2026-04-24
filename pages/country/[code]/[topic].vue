@@ -46,7 +46,7 @@ const { items, total, totalPages, loading, error } = useArticles({
   country: codeRef,
   topic: topicRef,
   page: pageParam,
-  pageSize: 20,
+  pageSize: 20
 })
 
 const topicMeta = computed(() => TOPIC_META[topic])
@@ -56,7 +56,7 @@ useSiteSeo({
     () => `${topicMeta.value.labelEn} news — ${country.value!.nameEn} — EarthLetter`
   ).value,
   description: `${topicMeta.value.description} Headlines for ${country.value!.nameEn}, refreshed hourly from curated sources.`,
-  ogType: 'website',
+  ogType: 'website'
 })
 
 // JSON-LD CollectionPage + ItemList — see architecture § 10.
@@ -74,9 +74,9 @@ const jsonLd = computed(() => {
         '@type': 'ListItem',
         position: i + 1,
         url: a.link,
-        name: a.title,
-      })),
-    },
+        name: a.title
+      }))
+    }
   }
 })
 

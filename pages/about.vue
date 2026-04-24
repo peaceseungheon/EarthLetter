@@ -3,7 +3,7 @@ useSiteSeo({
   title: 'About EarthLetter',
   description:
     'EarthLetter curates English-language headlines by country and topic — military, economy, and politics. Our mission, sources, and how we work.',
-  ogType: 'website',
+  ogType: 'website'
 })
 </script>
 

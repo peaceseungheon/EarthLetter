@@ -60,9 +60,9 @@ const props = withDefaults(defineProps<Props>(), {
         <div
           v-if="
             props.adEveryN > 0 &&
-            props.adSlotId &&
-            (idx + 1) % props.adEveryN === 0 &&
-            idx !== props.articles.length - 1
+              props.adSlotId &&
+              (idx + 1) % props.adEveryN === 0 &&
+              idx !== props.articles.length - 1
           "
           class="sm:col-span-2 lg:col-span-3"
         >

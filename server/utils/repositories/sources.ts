@@ -20,8 +20,8 @@ export async function listEnabledSources(): Promise<EnabledSource[]> {
       countryCode: true,
       topicSlug: true,
       name: true,
-      feedUrl: true,
+      feedUrl: true
     },
-    orderBy: { id: 'asc' },
+    orderBy: { id: 'asc' }
   })
 }

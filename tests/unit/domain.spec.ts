@@ -4,7 +4,7 @@ import {
   isTopicSlug,
   toIsoCountryCode,
   TOPIC_META,
-  TOPIC_SLUGS,
+  TOPIC_SLUGS
 } from '../../types/domain'
 
 describe('isTopicSlug', () => {

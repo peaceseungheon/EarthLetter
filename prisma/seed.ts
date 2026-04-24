@@ -42,13 +42,13 @@ const COUNTRIES: CountrySeed[] = [
   { code: 'DE', nameEn: 'Germany', nameKo: '독일' },
   { code: 'FR', nameEn: 'France', nameKo: '프랑스' },
   { code: 'IL', nameEn: 'Israel', nameKo: '이스라엘' },
-  { code: 'IN', nameEn: 'India', nameKo: '인도' },
+  { code: 'IN', nameEn: 'India', nameKo: '인도' }
 ]
 
 const TOPICS: TopicSeed[] = [
   { slug: 'military', label: 'Military & Security' },
   { slug: 'economy', label: 'Economy' },
-  { slug: 'politics', label: 'Politics' },
+  { slug: 'politics', label: 'Politics' }
 ]
 
 // NOTE: feedUrl must be unique across the table (Source.feedUrl @unique).
@@ -59,37 +59,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'US',
     topicSlug: 'military',
     name: 'Defense News — Top Stories',
-    feedUrl: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml',
+    feedUrl: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml'
   },
   {
     countryCode: 'US',
     topicSlug: 'military',
     name: 'Military.com — News',
-    feedUrl: 'https://www.military.com/rss-feeds/content-feed.xml', // REVIEW: verify path
+    feedUrl: 'https://www.military.com/rss-feeds/content-feed.xml' // REVIEW: verify path
   },
   {
     countryCode: 'US',
     topicSlug: 'economy',
     name: 'Reuters — US Business',
-    feedUrl: 'https://www.reutersagency.com/feed/?best-sectors=business-finance&post_type=best',
+    feedUrl: 'https://www.reutersagency.com/feed/?best-sectors=business-finance&post_type=best'
   },
   {
     countryCode: 'US',
     topicSlug: 'economy',
     name: 'CNBC — Economy',
-    feedUrl: 'https://www.cnbc.com/id/20910258/device/rss/rss.html',
+    feedUrl: 'https://www.cnbc.com/id/20910258/device/rss/rss.html'
   },
   {
     countryCode: 'US',
     topicSlug: 'politics',
     name: 'The Hill — News',
-    feedUrl: 'https://thehill.com/news/feed/',
+    feedUrl: 'https://thehill.com/news/feed/'
   },
   {
     countryCode: 'US',
     topicSlug: 'politics',
     name: 'Politico — Politics',
-    feedUrl: 'https://rss.politico.com/politics-news.xml',
+    feedUrl: 'https://rss.politico.com/politics-news.xml'
   },
 
   // ---------- United Kingdom ----------
@@ -97,37 +97,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'GB',
     topicSlug: 'military',
     name: 'UK Defence Journal',
-    feedUrl: 'https://ukdefencejournal.org.uk/feed/',
+    feedUrl: 'https://ukdefencejournal.org.uk/feed/'
   },
   {
     countryCode: 'GB',
     topicSlug: 'military',
     name: 'Forces News', // REVIEW: check if still publishing
-    feedUrl: 'https://www.forces.net/rss.xml',
+    feedUrl: 'https://www.forces.net/rss.xml'
   },
   {
     countryCode: 'GB',
     topicSlug: 'economy',
     name: 'BBC News — Business',
-    feedUrl: 'https://feeds.bbci.co.uk/news/business/rss.xml',
+    feedUrl: 'https://feeds.bbci.co.uk/news/business/rss.xml'
   },
   {
     countryCode: 'GB',
     topicSlug: 'economy',
     name: 'The Guardian — UK Economics',
-    feedUrl: 'https://www.theguardian.com/business/economics/rss',
+    feedUrl: 'https://www.theguardian.com/business/economics/rss'
   },
   {
     countryCode: 'GB',
     topicSlug: 'politics',
     name: 'BBC News — Politics',
-    feedUrl: 'https://feeds.bbci.co.uk/news/politics/rss.xml',
+    feedUrl: 'https://feeds.bbci.co.uk/news/politics/rss.xml'
   },
   {
     countryCode: 'GB',
     topicSlug: 'politics',
     name: 'The Guardian — UK Politics',
-    feedUrl: 'https://www.theguardian.com/politics/rss',
+    feedUrl: 'https://www.theguardian.com/politics/rss'
   },
 
   // ---------- China ----------
@@ -135,37 +135,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'CN',
     topicSlug: 'military',
     name: 'Global Times — China Military', // REVIEW: state-run; included for coverage
-    feedUrl: 'https://www.globaltimes.cn/rss/china.xml',
+    feedUrl: 'https://www.globaltimes.cn/rss/china.xml'
   },
   {
     countryCode: 'CN',
     topicSlug: 'military',
     name: 'South China Morning Post — China Military',
-    feedUrl: 'https://www.scmp.com/rss/322262/feed', // REVIEW: SCMP RSS IDs rotate
+    feedUrl: 'https://www.scmp.com/rss/322262/feed' // REVIEW: SCMP RSS IDs rotate
   },
   {
     countryCode: 'CN',
     topicSlug: 'economy',
     name: 'South China Morning Post — China Economy',
-    feedUrl: 'https://www.scmp.com/rss/92/feed', // REVIEW
+    feedUrl: 'https://www.scmp.com/rss/92/feed' // REVIEW
   },
   {
     countryCode: 'CN',
     topicSlug: 'economy',
     name: 'Caixin Global',
-    feedUrl: 'https://www.caixinglobal.com/rss/economy.xml', // REVIEW: verify path
+    feedUrl: 'https://www.caixinglobal.com/rss/economy.xml' // REVIEW: verify path
   },
   {
     countryCode: 'CN',
     topicSlug: 'politics',
     name: 'South China Morning Post — China Politics',
-    feedUrl: 'https://www.scmp.com/rss/4/feed', // REVIEW
+    feedUrl: 'https://www.scmp.com/rss/4/feed' // REVIEW
   },
   {
     countryCode: 'CN',
     topicSlug: 'politics',
     name: 'Xinhua — China',
-    feedUrl: 'http://www.xinhuanet.com/english/rss/chinarss.xml', // REVIEW: state-run
+    feedUrl: 'http://www.xinhuanet.com/english/rss/chinarss.xml' // REVIEW: state-run
   },
 
   // ---------- Russia ----------
@@ -173,37 +173,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'RU',
     topicSlug: 'military',
     name: 'The Moscow Times — Russia',
-    feedUrl: 'https://www.themoscowtimes.com/rss/news',
+    feedUrl: 'https://www.themoscowtimes.com/rss/news'
   },
   {
     countryCode: 'RU',
     topicSlug: 'military',
     name: 'Meduza — English',
-    feedUrl: 'https://meduza.io/rss/en/news',
+    feedUrl: 'https://meduza.io/rss/en/news'
   },
   {
     countryCode: 'RU',
     topicSlug: 'economy',
     name: 'Reuters — Russia', // REVIEW: topic breadth
-    feedUrl: 'https://www.reutersagency.com/feed/?taxonomy=best-regions&post_type=best&best-regions=europe',
+    feedUrl: 'https://www.reutersagency.com/feed/?taxonomy=best-regions&post_type=best&best-regions=europe'
   },
   {
     countryCode: 'RU',
     topicSlug: 'economy',
     name: 'bne IntelliNews — Russia',
-    feedUrl: 'https://www.intellinews.com/rss/country/russia', // REVIEW
+    feedUrl: 'https://www.intellinews.com/rss/country/russia' // REVIEW
   },
   {
     countryCode: 'RU',
     topicSlug: 'politics',
     name: 'The Moscow Times — Politics',
-    feedUrl: 'https://www.themoscowtimes.com/rss/politics', // REVIEW: section may differ
+    feedUrl: 'https://www.themoscowtimes.com/rss/politics' // REVIEW: section may differ
   },
   {
     countryCode: 'RU',
     topicSlug: 'politics',
     name: 'RFE/RL — Russia',
-    feedUrl: 'https://www.rferl.org/api/zrqiteuuipt',
+    feedUrl: 'https://www.rferl.org/api/zrqiteuuipt'
   },
 
   // ---------- Japan ----------
@@ -211,37 +211,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'JP',
     topicSlug: 'military',
     name: 'The Japan Times — National',
-    feedUrl: 'https://www.japantimes.co.jp/feed/topstories/',
+    feedUrl: 'https://www.japantimes.co.jp/feed/topstories/'
   },
   {
     countryCode: 'JP',
     topicSlug: 'military',
     name: 'NHK World — News',
-    feedUrl: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/', // REVIEW
+    feedUrl: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/' // REVIEW
   },
   {
     countryCode: 'JP',
     topicSlug: 'economy',
     name: 'Nikkei Asia — Economy',
-    feedUrl: 'https://asia.nikkei.com/rss/feed/nar', // REVIEW: broad
+    feedUrl: 'https://asia.nikkei.com/rss/feed/nar' // REVIEW: broad
   },
   {
     countryCode: 'JP',
     topicSlug: 'economy',
     name: 'The Japan Times — Business',
-    feedUrl: 'https://www.japantimes.co.jp/business/feed/',
+    feedUrl: 'https://www.japantimes.co.jp/business/feed/'
   },
   {
     countryCode: 'JP',
     topicSlug: 'politics',
     name: 'The Japan Times — Politics',
-    feedUrl: 'https://www.japantimes.co.jp/news/politics-diplomacy/feed/',
+    feedUrl: 'https://www.japantimes.co.jp/news/politics-diplomacy/feed/'
   },
   {
     countryCode: 'JP',
     topicSlug: 'politics',
     name: 'Kyodo News — Politics',
-    feedUrl: 'https://english.kyodonews.net/rss/politics.xml', // REVIEW
+    feedUrl: 'https://english.kyodonews.net/rss/politics.xml' // REVIEW
   },
 
   // ---------- South Korea ----------
@@ -249,37 +249,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'KR',
     topicSlug: 'military',
     name: 'Yonhap News — National/Defense',
-    feedUrl: 'https://en.yna.co.kr/RSS/northkorea.xml', // REVIEW: closest English defense feed
+    feedUrl: 'https://en.yna.co.kr/RSS/northkorea.xml' // REVIEW: closest English defense feed
   },
   {
     countryCode: 'KR',
     topicSlug: 'military',
     name: 'The Korea Herald — National',
-    feedUrl: 'https://www.koreaherald.com/common_prog/rssdisp.php?ct=010100000000.xml', // REVIEW
+    feedUrl: 'https://www.koreaherald.com/common_prog/rssdisp.php?ct=010100000000.xml' // REVIEW
   },
   {
     countryCode: 'KR',
     topicSlug: 'economy',
     name: 'The Korea Herald — Business',
-    feedUrl: 'https://www.koreaherald.com/common_prog/rssdisp.php?ct=020000000000.xml', // REVIEW
+    feedUrl: 'https://www.koreaherald.com/common_prog/rssdisp.php?ct=020000000000.xml' // REVIEW
   },
   {
     countryCode: 'KR',
     topicSlug: 'economy',
     name: 'Yonhap News — Business',
-    feedUrl: 'https://en.yna.co.kr/RSS/business.xml',
+    feedUrl: 'https://en.yna.co.kr/RSS/business.xml'
   },
   {
     countryCode: 'KR',
     topicSlug: 'politics',
     name: 'Yonhap News — Politics',
-    feedUrl: 'https://en.yna.co.kr/RSS/politics.xml',
+    feedUrl: 'https://en.yna.co.kr/RSS/politics.xml'
   },
   {
     countryCode: 'KR',
     topicSlug: 'politics',
     name: 'The Korea Times — Politics',
-    feedUrl: 'https://www.koreatimes.co.kr/www/rss/nation.xml', // REVIEW
+    feedUrl: 'https://www.koreatimes.co.kr/www/rss/nation.xml' // REVIEW
   },
 
   // ---------- Germany ----------
@@ -287,37 +287,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'DE',
     topicSlug: 'military',
     name: 'Deutsche Welle — Germany',
-    feedUrl: 'https://rss.dw.com/rdf/rss-en-ger',
+    feedUrl: 'https://rss.dw.com/rdf/rss-en-ger'
   },
   {
     countryCode: 'DE',
     topicSlug: 'military',
     name: 'The Local DE — News', // REVIEW: broad but covers defense
-    feedUrl: 'https://feeds.thelocal.com/rss/de',
+    feedUrl: 'https://feeds.thelocal.com/rss/de'
   },
   {
     countryCode: 'DE',
     topicSlug: 'economy',
     name: 'Deutsche Welle — Business',
-    feedUrl: 'https://rss.dw.com/rdf/rss-en-bus',
+    feedUrl: 'https://rss.dw.com/rdf/rss-en-bus'
   },
   {
     countryCode: 'DE',
     topicSlug: 'economy',
     name: 'Reuters — Germany', // REVIEW
-    feedUrl: 'https://www.reutersagency.com/feed/?best-regions=europe&post_type=best',
+    feedUrl: 'https://www.reutersagency.com/feed/?best-regions=europe&post_type=best'
   },
   {
     countryCode: 'DE',
     topicSlug: 'politics',
     name: 'Der Spiegel — International',
-    feedUrl: 'https://www.spiegel.de/international/index.rss',
+    feedUrl: 'https://www.spiegel.de/international/index.rss'
   },
   {
     countryCode: 'DE',
     topicSlug: 'politics',
     name: 'Deutsche Welle — Top Stories',
-    feedUrl: 'https://rss.dw.com/rdf/rss-en-top',
+    feedUrl: 'https://rss.dw.com/rdf/rss-en-top'
   },
 
   // ---------- France ----------
@@ -325,37 +325,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'FR',
     topicSlug: 'military',
     name: 'France 24 — France',
-    feedUrl: 'https://www.france24.com/en/france/rss',
+    feedUrl: 'https://www.france24.com/en/france/rss'
   },
   {
     countryCode: 'FR',
     topicSlug: 'military',
     name: 'RFI — France',
-    feedUrl: 'https://www.rfi.fr/en/france/rss',
+    feedUrl: 'https://www.rfi.fr/en/france/rss'
   },
   {
     countryCode: 'FR',
     topicSlug: 'economy',
     name: 'France 24 — Business',
-    feedUrl: 'https://www.france24.com/en/business/rss',
+    feedUrl: 'https://www.france24.com/en/business/rss'
   },
   {
     countryCode: 'FR',
     topicSlug: 'economy',
     name: 'RFI — Business',
-    feedUrl: 'https://www.rfi.fr/en/business/rss',
+    feedUrl: 'https://www.rfi.fr/en/business/rss'
   },
   {
     countryCode: 'FR',
     topicSlug: 'politics',
     name: 'Le Monde — International',
-    feedUrl: 'https://www.lemonde.fr/en/international/rss_full.xml',
+    feedUrl: 'https://www.lemonde.fr/en/international/rss_full.xml'
   },
   {
     countryCode: 'FR',
     topicSlug: 'politics',
     name: 'Politico Europe',
-    feedUrl: 'https://www.politico.eu/feed/', // REVIEW: broader than FR-only
+    feedUrl: 'https://www.politico.eu/feed/' // REVIEW: broader than FR-only
   },
 
   // ---------- Israel ----------
@@ -363,37 +363,37 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'IL',
     topicSlug: 'military',
     name: 'The Times of Israel — IDF',
-    feedUrl: 'https://www.timesofisrael.com/topic/idf/feed/',
+    feedUrl: 'https://www.timesofisrael.com/topic/idf/feed/'
   },
   {
     countryCode: 'IL',
     topicSlug: 'military',
     name: 'The Jerusalem Post — Israel News',
-    feedUrl: 'https://www.jpost.com/rss/rssfeedsisraelnews',
+    feedUrl: 'https://www.jpost.com/rss/rssfeedsisraelnews'
   },
   {
     countryCode: 'IL',
     topicSlug: 'economy',
     name: 'The Times of Israel — Business',
-    feedUrl: 'https://www.timesofisrael.com/topic/business/feed/',
+    feedUrl: 'https://www.timesofisrael.com/topic/business/feed/'
   },
   {
     countryCode: 'IL',
     topicSlug: 'economy',
     name: 'Globes — English',
-    feedUrl: 'https://www.globes.co.il/WebService/rss/rssfeeder.asmx/FeederNode?iID=1725',
+    feedUrl: 'https://www.globes.co.il/WebService/rss/rssfeeder.asmx/FeederNode?iID=1725'
   },
   {
     countryCode: 'IL',
     topicSlug: 'politics',
     name: 'The Times of Israel — Politics',
-    feedUrl: 'https://www.timesofisrael.com/topic/politics/feed/',
+    feedUrl: 'https://www.timesofisrael.com/topic/politics/feed/'
   },
   {
     countryCode: 'IL',
     topicSlug: 'politics',
     name: 'Haaretz — Israel News',
-    feedUrl: 'https://www.haaretz.com/cmlink/1.628752', // REVIEW
+    feedUrl: 'https://www.haaretz.com/cmlink/1.628752' // REVIEW
   },
 
   // ---------- India ----------
@@ -401,38 +401,38 @@ const SOURCES: SourceSeed[] = [
     countryCode: 'IN',
     topicSlug: 'military',
     name: 'The Hindu — National',
-    feedUrl: 'https://www.thehindu.com/news/national/feeder/default.rss',
+    feedUrl: 'https://www.thehindu.com/news/national/feeder/default.rss'
   },
   {
     countryCode: 'IN',
     topicSlug: 'military',
     name: 'The Times of India — India News',
-    feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms',
+    feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms'
   },
   {
     countryCode: 'IN',
     topicSlug: 'economy',
     name: 'Livemint — Economy',
-    feedUrl: 'https://www.livemint.com/rss/economy',
+    feedUrl: 'https://www.livemint.com/rss/economy'
   },
   {
     countryCode: 'IN',
     topicSlug: 'economy',
     name: 'The Hindu — Business',
-    feedUrl: 'https://www.thehindu.com/business/feeder/default.rss',
+    feedUrl: 'https://www.thehindu.com/business/feeder/default.rss'
   },
   {
     countryCode: 'IN',
     topicSlug: 'politics',
     name: 'The Hindu — Politics',
-    feedUrl: 'https://www.thehindu.com/news/national/politics/feeder/default.rss',
+    feedUrl: 'https://www.thehindu.com/news/national/politics/feeder/default.rss'
   },
   {
     countryCode: 'IN',
     topicSlug: 'politics',
     name: 'NDTV — India',
-    feedUrl: 'https://feeds.feedburner.com/ndtvnews-india-news',
-  },
+    feedUrl: 'https://feeds.feedburner.com/ndtvnews-india-news'
+  }
 ]
 
 async function main() {
@@ -441,7 +441,7 @@ async function main() {
     await prisma.country.upsert({
       where: { code: c.code },
       update: { nameEn: c.nameEn, nameKo: c.nameKo },
-      create: c,
+      create: c
     })
   }
 
@@ -450,7 +450,7 @@ async function main() {
     await prisma.topic.upsert({
       where: { slug: t.slug },
       update: { label: t.label },
-      create: t,
+      create: t
     })
   }
 
@@ -461,9 +461,9 @@ async function main() {
       update: {
         countryCode: s.countryCode,
         topicSlug: s.topicSlug,
-        name: s.name,
+        name: s.name
       },
-      create: { ...s, enabled: true },
+      create: { ...s, enabled: true }
     })
   }
 

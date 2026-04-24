@@ -21,7 +21,7 @@ function bad(statusMessage: string, message: string) {
   return createError({
     statusCode: 400,
     statusMessage,
-    data: { statusCode: 400, statusMessage, message },
+    data: { statusCode: 400, statusMessage, message }
   })
 }
 
@@ -55,8 +55,8 @@ export default defineEventHandler(async (event): Promise<ArticlesResponseDTO> =>
       data: {
         statusCode: 404,
         statusMessage: 'NOT_FOUND',
-        message: `Country "${country}" is not registered.`,
-      },
+        message: `Country "${country}" is not registered.`
+      }
     })
   }
 

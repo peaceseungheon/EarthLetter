@@ -42,10 +42,10 @@ export function useSiteSeo(input: SiteSeoInput): void {
     twitterTitle: input.title,
     twitterDescription: input.description,
     twitterImage: ogImage,
-    robots: input.noIndex ? 'noindex, nofollow' : 'index, follow',
+    robots: input.noIndex ? 'noindex, nofollow' : 'index, follow'
   })
 
   useHead({
-    link: [{ rel: 'canonical', href: canonical }],
+    link: [{ rel: 'canonical', href: canonical }]
   })
 }
