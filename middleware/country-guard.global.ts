@@ -11,7 +11,8 @@ const ALPHA2_RE = /^[A-Z]{2}$/
 export default defineNuxtRouteMiddleware((to) => {
   if (!to.path.startsWith('/country/')) return
 
-  const code = String(to.params.code ?? '').toUpperCase()
+  const rawCode = String(to.params.code ?? '')
+  const code = rawCode.toUpperCase()
   if (!ALPHA2_RE.test(code)) {
     return abortNavigation(
       createError({
@@ -34,5 +35,11 @@ export default defineNuxtRouteMiddleware((to) => {
         })
       )
     }
+  }
+
+  // 소문자 코드 → 301 canonical redirect
+  if (rawCode !== code) {
+    const newPath = to.path.replace(`/country/${rawCode}`, `/country/${code}`)
+    return navigateTo(newPath, { redirectCode: 301 })
   }
 })
