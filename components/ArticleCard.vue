@@ -7,7 +7,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const relative = computed(() => useRelativeTime(props.article.publishedAt))
+const relative = useRelativeTime(props.article.publishedAt)
 const topicLabel = computed(
   () => TOPIC_META[props.article.source.topicSlug].labelEn
 )

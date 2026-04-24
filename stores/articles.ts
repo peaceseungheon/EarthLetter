@@ -88,8 +88,8 @@ export const useArticlesStore = defineStore('articles', {
           }
         }
       } catch (e: unknown) {
-        this.error =
-          e instanceof Error ? e.message : 'Failed to load articles'
+        const structured = (e as { data?: { message?: string } }).data?.message
+        this.error = structured ?? (e instanceof Error ? e.message : 'Failed to load articles')
       } finally {
         this.loading = false
       }

@@ -65,3 +65,8 @@
 - No skeletons on `ArticleList` during `loading=true`. EmptyState covers the error/no-data path only.
 - `CountrySelector` uses native `<select>` — intentional for a11y. If design later wants a combobox, swap to a headless component.
 - Theme toggle persists to `localStorage` via `@nuxt/color-mode` (`earthletter-color-mode` key, documented in privacy.vue).
+
+## Patch — 2026-04-24 (M-1, M-2 bug fixes)
+
+- **M-1 fixed** `components/ArticleCard.vue`: `computed` 래퍼 제거 → `useRelativeTime` 직접 호출
+- **M-2 fixed** `stores/articles.ts`, `stores/countries.ts`: catch 블록에서 `e.data?.message` 우선 참조, 폴백으로 `e.message`

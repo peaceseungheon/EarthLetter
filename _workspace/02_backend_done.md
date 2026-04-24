@@ -68,3 +68,7 @@ Error responses use `createError({ statusCode, statusMessage, data })` where
 - `eslint.config.mjs` sitting at Day 0 default — if backend files trip it,
   we should defer to frontend-dev's config owner (architecture § 3.3).
 - No rate limiting on `/api/ingest` beyond the bearer (spec § 5 defers).
+
+## Patch — 2026-04-24 (m-2 bug fix)
+
+- **m-2 fixed** `server/utils/rss.ts`: 날짜(`isoDate`/`pubDate`) 없는 RSS 아이템은 `continue`로 skip — `new Date()` 할당 제거

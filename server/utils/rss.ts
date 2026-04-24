@@ -77,7 +77,8 @@ export async function fetchFeed(
       if (!link || !title) continue
 
       const publishedRaw = item.isoDate ?? item.pubDate ?? null
-      const published = publishedRaw ? new Date(publishedRaw) : new Date()
+      if (!publishedRaw) continue
+      const published = new Date(publishedRaw)
       if (Number.isNaN(published.getTime())) continue
 
       const snippet = (item.contentSnippet ?? '').trim()

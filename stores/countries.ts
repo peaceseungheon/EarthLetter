@@ -56,8 +56,8 @@ export const useCountriesStore = defineStore('countries', {
         this.items = data.value?.items ?? []
         this.lastFetched = Date.now()
       } catch (e: unknown) {
-        this.error =
-          e instanceof Error ? e.message : 'Failed to load countries'
+        const structured = (e as { data?: { message?: string } }).data?.message
+        this.error = structured ?? (e instanceof Error ? e.message : 'Failed to load countries')
       } finally {
         this.loading = false
       }

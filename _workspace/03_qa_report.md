@@ -134,3 +134,16 @@ E2E (`tests/e2e/`):
 2. Re-run unit suite locally: `pnpm install && pnpm prisma:generate && pnpm test`.
 3. Boot preview and manually walk: home → country → topic → paginate → about/privacy/terms.
 4. Ship, then address **M-1** / **M-2** in a follow-up (non-blocking).
+
+---
+
+## Patch Verification — 2026-04-24
+
+| Bug | File | Status |
+|-----|------|--------|
+| M-1 | `components/ArticleCard.vue:10` | ✅ `computed` 래퍼 제거, SSR/hydration 문제 없음 |
+| M-2 | `stores/articles.ts:91`, `stores/countries.ts:59` | ✅ `e.data?.message` 우선, null-safe 폴백 체인 |
+| m-2 | `server/utils/rss.ts:80` | ✅ `publishedRaw` falsy 시 `continue` skip, 타입 안전 |
+| U-1 | `components/ArticleList.vue` | ✅ 스켈레톤 이미 구현됨 (lines 24–39) — 별도 작업 불필요 |
+
+모든 패치 부작용 없음. 남은 오픈 이슈: **m-3**(소문자 국가코드 301 리다이렉트), **m-4**(rate limiting, spec §5 연기).
