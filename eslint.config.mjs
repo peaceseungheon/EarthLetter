@@ -5,35 +5,39 @@
 
 import withNuxt from './.nuxt/eslint.config.mjs'
 
-export default withNuxt({
-  rules: {
-    // Nuxt convention: no semicolons, single quotes, 2-space indent.
-    semi: ['error', 'never'],
-    quotes: ['error', 'single', { avoidEscape: true }],
-    indent: ['error', 2, { SwitchCase: 1 }],
-    'comma-dangle': ['error', 'never'],
+export default withNuxt(
+  {
+    rules: {
+      // Nuxt convention: no semicolons, single quotes, 2-space indent.
+      semi: ['error', 'never'],
+      quotes: ['error', 'single', { avoidEscape: true }],
+      indent: ['error', 2, { SwitchCase: 1 }],
+      'comma-dangle': ['error', 'never'],
 
-    // Vue SFC style aligned with Prettier.
-    'vue/html-indent': ['error', 2],
-    'vue/multi-word-component-names': 'off',
-    'vue/max-attributes-per-line': 'off',
-    'vue/singleline-html-element-content-newline': 'off',
+      // Vue SFC style aligned with Prettier.
+      'vue/html-indent': ['error', 2],
+      'vue/multi-word-component-names': 'off',
+      'vue/max-attributes-per-line': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
 
-    // TypeScript: allow `any` only with explicit narrowing in server code.
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/consistent-type-imports': [
-      'error',
-      { prefer: 'type-imports' }
+      '@typescript-eslint/no-explicit-any': 'warn'
+    },
+    ignores: [
+      '.nuxt/**',
+      '.output/**',
+      'dist/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      'node_modules/**',
+      'assets/geo/*.json'
     ]
   },
-  ignores: [
-    '.nuxt/**',
-    '.output/**',
-    'dist/**',
-    'coverage/**',
-    'playwright-report/**',
-    'test-results/**',
-    'node_modules/**',
-    'assets/geo/*.json'
-  ]
-})
+  {
+    // consistent-type-imports requires type information — apply only where TS parser is active
+    files: ['**/*.ts', '**/*.tsx', '**/*.vue'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }]
+    }
+  }
+)
