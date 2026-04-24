@@ -88,6 +88,27 @@ export default defineNuxtConfig({
     '/api/**': { cors: false },
     '/api/ingest': { cors: false },
     '/api/prune': { cors: false },
+    // Feature E — admin dashboard: no caching, no indexing.
+    // NOTE: `robots: false` is a @nuxtjs/robots route-rule extension that the
+    // module consumes at build time; the base NitroRouteConfig type does not
+    // declare it, hence the ts-expect-error below.
+    '/admin/**': {
+      headers: {
+        'Cache-Control': 'no-store, private',
+        'X-Robots-Tag': 'noindex, nofollow'
+      },
+      // @ts-expect-error — @nuxtjs/robots augments routeRules at runtime only.
+      robots: false
+    },
+    '/api/admin/**': {
+      cors: false,
+      headers: {
+        'Cache-Control': 'no-store, private',
+        'X-Robots-Tag': 'noindex, nofollow'
+      },
+      // @ts-expect-error — @nuxtjs/robots augments routeRules at runtime only.
+      robots: false
+    },
     '/sitemap.xml': { swr: 3600 }
   },
 

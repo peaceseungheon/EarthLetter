@@ -1,74 +1,45 @@
-# Phase 2b — Backend Completion Report
+# Phase 3 — Backend Day 0 완료
 
-**Date:** 2026-04-22
-**Status:** Files created. `pnpm install` and database migration not yet run.
+**Date:** 2026-04-24
+**Status:** Day 0 완료. frontend-dev 언블록됨.
 
-## Files created
+## 완료된 파일
 
-### Prisma
-- `prisma/schema.prisma`
-- `prisma/seed.ts` (10 countries × 3 topics, curated English RSS feeds)
+- `prisma/schema.prisma` — Source: failCount, lastFailedAt, disabledAt, createdAt 추가; Article: onDelete Cascade 추가; 인덱스 추가
+- `types/dto.ts` — AdminSourceDTO, AdminSourcesResponseDTO, AdminSourceCreateDTO, AdminSourcePatchDTO, AdminSourceDeleteResponseDTO, AdminSourcesQueryDTO 추가; IngestResponseDTO.autoDisabled 추가
+- `.env.example` — el_admin 쿠키 설명 추가
 
-### Server utilities
-- `server/utils/prisma.ts` — `PrismaClient` singleton
-- `server/utils/hash.ts` — `sha256(str)` via node:crypto
-- `server/utils/rss.ts` — `fetchFeed`, `parallel` (p-limit bounded)
-- `server/utils/auth.ts` — `requireIngestSecret` with timing-safe compare
-- `server/utils/repositories/articles.ts` — `findArticles`, `findLatestAcrossSources`, `upsertArticle`, `pruneOlderThan`
-- `server/utils/repositories/countries.ts` — `listCountriesWithHasSources`, `countryExists`
-- `server/utils/repositories/sources.ts` — `listEnabledSources`
-- `server/utils/services/ingest.ts` — `runIngestion()` orchestration
+## Day 1+ 남은 작업
 
-### Server routes (all typed to `types/dto.ts`)
-- `server/api/countries.get.ts` → `CountriesResponseDTO`
-- `server/api/articles.get.ts` → `ArticlesResponseDTO` (query validation: country, topic, page, pageSize)
-- `server/api/home.get.ts` → `HomeResponseDTO` (latest 12)
-- `server/api/ingest.post.ts` → `IngestResponseDTO` (bearer-gated)
-- `server/api/prune.post.ts` → `PruneResponseDTO` (bearer-gated, 90-day retention)
-- `server/api/__sitemap__/urls.get.ts` — feeds `@nuxtjs/sitemap`
+- server/utils/auth.ts — requireAdminSession 추가
+- server/utils/repositories/sources.ts — CRUD + 실패 집계 함수 추가
+- server/utils/services/sourceAdmin.ts — 신규 생성
+- server/utils/services/ingest.ts — 실패/성공 집계 + autoDisabled 반환
+- server/api/admin/* — 6개 엔드포인트 (session, sources CRUD)
+- prisma/seed.ts — 10 → 30개국
+- nuxt.config.ts — /admin/** routeRules
+- 테스트 파일들
 
-### GitHub Actions
-- `.github/workflows/ci.yml` — PR/push: install → prisma:generate → typecheck → lint → unit → build → E2E
-- `.github/workflows/ingest.yml` — hourly cron + manual; POSTs `/api/ingest`
-- `.github/workflows/prune.yml` — daily 03:00 UTC; POSTs `/api/prune`
+## Day 1+ 완료 — 2026-04-24
 
-## DB schema key decisions
-- `Article.id = sha256(link)` → idempotent upserts, natural dedup
-- Composite index `(sourceId, publishedAt DESC)` for per-source queries
-- Secondary index `(publishedAt DESC)` for home featured query
-- `Source.feedUrl @unique` prevents duplicate feed registration within seed
+### 생성/수정된 파일
 
-## Seed RSS URLs — REVIEW flagged
-Several English-language geopolitical RSS URLs were curated from publicly
-advertised feeds. Before production seed-run, a human should sanity-check:
-- Chinese / Russian English-language outlets (state-affiliated) — intentional
-  for coverage; editorial caveat may belong in /about copy.
-- Any feed returning 301/302 persistently should be updated to the final URL.
+- `server/utils/auth.ts` — requireAdminSession 추가
+- `server/utils/repositories/sources.ts` — recordSourceSuccess, recordSourceFailure, listAdminSources, findAdminSource, createSource, updateSource, deleteSource 추가
+- `server/utils/services/sourceAdmin.ts` — 신규 (검증 + 오케스트레이션)
+- `server/utils/services/ingest.ts` — 실패/성공 집계 + autoDisabled 반환
+- `server/api/admin/session.post.ts` — 신규
+- `server/api/admin/session/logout.post.ts` — 신규
+- `server/api/admin/sources.get.ts` — 신규
+- `server/api/admin/sources.post.ts` — 신규
+- `server/api/admin/sources/[id].patch.ts` — 신규
+- `server/api/admin/sources/[id].delete.ts` — 신규
+- `nuxt.config.ts` — /admin/**, /api/admin/** routeRules 추가
+- `prisma/seed.ts` — 10 → 30개국
 
-## Known weak points (for QA)
-1. **`runIngestion` failure semantics** — per-source try/catch, per-item silent
-   ignore on DB write failure. A degenerate feed with malformed dates still
-   surfaces `publishedAt = now()` fallback from `rss.ts`. QA should confirm
-   this is acceptable (can cause "new" articles that aren't actually new).
-2. **Pagination boundary** — `articles.get.ts` rejects `page < 1` and
-   `pageSize > 50`. `totalPages` may be 0 when `total = 0`; frontend should
-   handle `page > totalPages` as empty (no redirect).
-3. **Bearer timing-safe compare** assumes UTF-8 byte equality; not an issue
-   for ASCII secrets but document in README if someone uses unicode.
-4. **Sitemap query** runs on every sitemap cache miss — with 10 countries
-   this is trivial, but scale to 50+ should move to a cached JSON blob.
+### 알려진 약점 (QA용)
 
-## Contract adherence
-All routes return exactly the shapes in `types/dto.ts`. No envelope wrapper.
-`publishedAt` always serialized as ISO-8601 string (Date → `.toISOString()`).
-Error responses use `createError({ statusCode, statusMessage, data })` where
-`data` matches `ApiErrorDTO`.
-
-## Open items (not blocking QA)
-- `eslint.config.mjs` sitting at Day 0 default — if backend files trip it,
-  we should defer to frontend-dev's config owner (architecture § 3.3).
-- No rate limiting on `/api/ingest` beyond the bearer (spec § 5 defers).
-
-## Patch — 2026-04-24 (m-2 bug fix)
-
-- **m-2 fixed** `server/utils/rss.ts`: 날짜(`isoDate`/`pubDate`) 없는 RSS 아이템은 `continue`로 skip — `new Date()` 할당 제거
+1. rate limiting은 in-memory Map — Vercel cold start 시 리셋됨
+2. seed.ts의 일부 RSS URL은 `// REVIEW:` 표시 — 실제 URL 검증 필요
+3. deleteSource는 onDelete Cascade에 의존하되 articleCount를 별도 쿼리로 카운트 — 경쟁 조건 가능성 낮음
+4. requireAdminSession이 runtimeConfig.ingestSecret을 읽는데 이 값이 비어있으면 모든 요청이 통과될 수 있음 — 빈 값 guard 필요
