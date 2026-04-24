@@ -35,12 +35,17 @@ model Source {
   name        String
   feedUrl     String    @unique
   enabled     Boolean   @default(true)
+  failCount     Int       @default(0)
+  lastFailedAt  DateTime?
+  disabledAt    DateTime?
+  createdAt     DateTime  @default(now())
 
   country  Country   @relation(fields: [countryCode], references: [code])
   topic    Topic     @relation(fields: [topicSlug], references: [slug])
   articles Article[]
 
   @@index([countryCode, topicSlug])
+  @@index([enabled, disabledAt])
 }
 
 /// A single RSS item. `id` is sha256(link) so re-ingestion is idempotent.
@@ -54,7 +59,7 @@ model Article {
   publishedAt DateTime
   fetchedAt   DateTime @default(now())
 
-  source Source @relation(fields: [sourceId], references: [id])
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
   @@index([sourceId, publishedAt(sort: Desc)])
   @@index([publishedAt(sort: Desc)])

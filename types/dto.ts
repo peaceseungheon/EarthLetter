@@ -80,6 +80,7 @@ export interface IngestResponseDTO {
   inserted: number // new Article rows
   updated: number // upserts that replaced existing row
   failedSources: IngestFailure[]
+  autoDisabled: number // sources that crossed the auto-disable threshold this run
   durationMs: number
 }
 
@@ -113,4 +114,49 @@ export type ApiError = ApiErrorDTO
  */
 export interface ApiEnvelope<T> {
   data: T
+}
+
+// ---------- Admin: Source management (Feature E) ----------
+
+export interface AdminSourceDTO {
+  id: number
+  countryCode: IsoCountryCode
+  topicSlug: TopicSlug
+  name: string
+  feedUrl: string
+  enabled: boolean
+  failCount: number
+  lastFailedAt: string | null
+  disabledAt: string | null
+  articleCount: number
+  createdAt: string
+}
+
+export interface AdminSourcesQueryDTO {
+  country?: IsoCountryCode
+  topic?: TopicSlug
+  enabled?: 'true' | 'false' | 'all'
+  disabled?: 'auto' | 'manual' | 'any'
+}
+
+export interface AdminSourcesResponseDTO {
+  items: AdminSourceDTO[]
+  total: number
+}
+
+export interface AdminSourceCreateDTO {
+  countryCode: IsoCountryCode
+  topicSlug: TopicSlug
+  name: string
+  feedUrl: string
+}
+
+export interface AdminSourcePatchDTO {
+  enabled?: boolean
+  name?: string
+}
+
+export interface AdminSourceDeleteResponseDTO {
+  id: number
+  deletedArticles: number
 }
