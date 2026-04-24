@@ -86,8 +86,8 @@ export default defineNuxtConfig({
     '/privacy': { prerender: true },
     '/terms': { prerender: true },
     '/api/**': { cors: false },
-    '/api/ingest': { cors: false, robots: false },
-    '/api/prune': { cors: false, robots: false },
+    '/api/ingest': { cors: false },
+    '/api/prune': { cors: false },
     '/sitemap.xml': { swr: 3600 }
   },
 
