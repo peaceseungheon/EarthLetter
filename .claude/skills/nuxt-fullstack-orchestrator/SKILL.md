@@ -22,8 +22,34 @@ description: Nuxt 3 풀스택 웹사이트 개발 팀 오케스트레이터. arc
 _workspace/ 존재 여부 확인:
   없음 → 초기 실행 → Phase 1부터
   있음 + 사용자가 "다시"/"업데이트"/"개선" → 부분 재실행 → 해당 Phase만
-  있음 + 새 기능 요청 → _workspace/를 _workspace_prev/로 이동 → Phase 1부터
+  있음 + 새 기능 요청 → 이력 보존 후 Phase 1부터 (아래 규칙 참고)
 ```
+
+### _workspace/ 이력 관리 규칙
+
+**모든 이력은 `_workspace/history/` 하위 디렉토리에 보관한다.**
+
+```
+_workspace/
+├── history/
+│   ├── YYYY-MM-DD_<기능명>/    # 완료된 이터레이션 (날짜_기능명)
+│   │   ├── 00_architecture.md
+│   │   ├── 01_frontend_done.md
+│   │   ├── 02_backend_done.md
+│   │   └── 03_qa_report.md
+│   └── YYYY-MM-DD_<기능명>/    # 이전 이터레이션들
+├── 00_architecture.md          # 현재 진행 중인 설계
+├── 01_frontend_done.md         # 현재 진행 중인 FE 완료 보고
+├── 02_backend_done.md          # 현재 진행 중인 BE 완료 보고
+└── 03_qa_report.md             # 현재 진행 중인 QA 보고
+```
+
+**새 기능 요청 시 절차:**
+1. 현재 `_workspace/*.md` 파일들을 `_workspace/history/YYYY-MM-DD_<기능명>/`으로 이동
+2. `_workspace/` 루트를 비우고 Phase 1부터 시작
+3. `history/` 하위 디렉토리는 절대 삭제하지 않음 — 참고 자료로 활용
+
+**날짜:** `date +%Y-%m-%d` 형식. 기능명은 2-3 단어 영문 소문자 (예: `2026-04-21_mvp-init`, `2026-04-24_admin-dashboard`)
 
 부분 재실행 시: 요청된 에이전트만 재호출하고 나머지는 기존 산출물 유지.
 
