@@ -52,6 +52,11 @@ useSiteSeo({
       endorse editorial lines. When in doubt, read the original and check the
       "About" page of the publisher.
     </p>
+    <p>
+      Some sources are state-affiliated. EarthLetter does not endorse any
+      content; we aggregate headlines across perspectives to provide a
+      balanced global view.
+    </p>
 
     <h2>Contact</h2>
     <p>
