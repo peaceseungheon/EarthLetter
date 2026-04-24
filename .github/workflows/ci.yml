@@ -18,6 +18,20 @@ jobs:
       DIRECT_URL: postgres://postgres:postgres@localhost:5432/earthletter_test
       SITE_URL: http://localhost:3000
       INGEST_SECRET: test-ingest-secret-at-least-eight
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: earthletter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -41,5 +55,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Build
         run: pnpm build
+      - name: Run database migrations
+        run: pnpm prisma:migrate:deploy
       - name: E2E tests
         run: pnpm test:e2e
