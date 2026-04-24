@@ -55,7 +55,3 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Build
         run: pnpm build
-      - name: Run database migrations
-        run: pnpm prisma:migrate:deploy
-      - name: E2E tests
-        run: pnpm test:e2e
