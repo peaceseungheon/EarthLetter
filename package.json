@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
+    "build": "prisma generate && nuxt build",
     "preview": "nuxt preview",
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare && node -e \"const fs=require('node:fs');const path=require('node:path');const src=require.resolve('world-atlas/countries-110m.json');const dest=path.join('assets','geo','countries-110m.json');fs.mkdirSync(path.dirname(dest),{recursive:true});fs.copyFileSync(src,dest);\"",
@@ -48,6 +48,7 @@
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^22.9.1",
     "@types/topojson-client": "^3.1.5",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.15.0",
     "prettier": "^3.3.3",
     "prisma": "^5.22.0",
