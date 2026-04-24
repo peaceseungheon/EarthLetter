@@ -47,7 +47,7 @@ export async function fetchFeed(
       redirect: 'follow',
       headers: {
         'User-Agent':
-          'EarthLetterBot/0.1 (+https://github.com/ — news aggregation; contact via site)',
+          'EarthLetterBot/0.1 (+https://github.com/ - news aggregation; contact via site)',
         Accept:
           'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5'
       }
