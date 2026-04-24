@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Map color custom properties — architecture § 8.5.
+   Concrete tokens wired through tailwind.config.ts `colors.map.*`;
+   CSS vars here let <WorldMapPath> avoid inline conditional classes. */
+:root {
+  --map-fill-active: theme('colors.map.active');
+  --map-fill-muted: theme('colors.map.muted');
+  --map-stroke: theme('colors.map.stroke');
+}
+
+.dark {
+  --map-fill-active: theme('colors.map.active-dark');
+  --map-fill-muted: theme('colors.map.muted-dark');
+  --map-stroke: theme('colors.map.stroke-dark');
+}

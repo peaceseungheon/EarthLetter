@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Nuxt build output
+.nuxt/
+.output/
+.nitro/
+.cache/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Prisma local SQLite DBs (if ever used for prototyping)
+prisma/*.db
+prisma/*.db-journal
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Misc
+*.tsbuildinfo
+.eslintcache

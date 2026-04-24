@@ -1,0 +1,33 @@
+name: prune
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: prune
+  cancel-in-progress: false
+
+jobs:
+  run-prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/prune
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$INGEST_SECRET" ]; then
+            echo "Missing SITE_URL or INGEST_SECRET secret." >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error \
+            --max-time 120 \
+            -X POST "$SITE_URL/api/prune" \
+            -H "Authorization: Bearer $INGEST_SECRET" \
+            -H "Content-Type: application/json" \
+            -o response.json
+          echo "--- prune summary ---"
+          cat response.json

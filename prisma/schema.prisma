@@ -1,0 +1,61 @@
+// EarthLetter — Prisma schema.
+// Source of truth: _workspace/00_architecture.md § 4 + spec § 4.
+// Any change here must be mirrored in types/dto.ts reviewers (contract-frozen).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// ISO-3166 alpha-2 country registry.
+model Country {
+  code    String   @id // e.g. "US", "KR"
+  nameEn  String
+  nameKo  String?
+  sources Source[]
+}
+
+/// The three curated geopolitical topics. Fixed set; expansion requires app changes.
+model Topic {
+  slug    String   @id // "military" | "economy" | "politics"
+  label   String
+  sources Source[]
+}
+
+/// One RSS feed for a given (country, topic) cell.
+model Source {
+  id          Int       @id @default(autoincrement())
+  countryCode String
+  topicSlug   String
+  name        String
+  feedUrl     String    @unique
+  enabled     Boolean   @default(true)
+
+  country  Country   @relation(fields: [countryCode], references: [code])
+  topic    Topic     @relation(fields: [topicSlug], references: [slug])
+  articles Article[]
+
+  @@index([countryCode, topicSlug])
+}
+
+/// A single RSS item. `id` is sha256(link) so re-ingestion is idempotent.
+model Article {
+  id          String   @id // sha256(link)
+  sourceId    Int
+  title       String
+  summary     String?
+  link        String   @unique
+  imageUrl    String?
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+
+  source Source @relation(fields: [sourceId], references: [id])
+
+  @@index([sourceId, publishedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc)])
+}

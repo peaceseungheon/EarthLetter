@@ -1,0 +1,9 @@
+# Placeholder. Populate this directory with `countries-110m.json` from world-atlas@2.
+#
+# After `pnpm install` runs, execute from repo root:
+#
+#   node -e "require('fs').copyFileSync(require.resolve('world-atlas/countries-110m.json'), 'assets/geo/countries-110m.json')"
+#
+# WorldMap.vue dynamically imports `~/assets/geo/countries-110m.json`. If the
+# file is missing, the map container renders an empty-state banner plus the
+# <CountrySelector> fallback so the page stays functional.

@@ -1,0 +1,66 @@
+{
+  "name": "earthletter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EarthLetter — World news by country. Nuxt 3 SSR app.",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "generate": "nuxt generate",
+    "postinstall": "nuxt prepare && node -e \"const fs=require('node:fs');const path=require('node:path');const src=require.resolve('world-atlas/countries-110m.json');const dest=path.join('assets','geo','countries-110m.json');fs.mkdirSync(path.dirname(dest),{recursive:true});fs.copyFileSync(src,dest);\"",
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.6.1",
+    "@nuxtjs/color-mode": "4.0.0",
+    "@nuxtjs/robots": "^5.2.2",
+    "@nuxtjs/sitemap": "^7.2.7",
+    "@nuxtjs/tailwindcss": "^6.12.2",
+    "@pinia/nuxt": "^0.7.0",
+    "@prisma/client": "^5.22.0",
+    "d3-geo": "^3.1.1",
+    "nuxt": "^3.14.1592",
+    "p-limit": "^6.1.0",
+    "pinia": "^2.2.6",
+    "rss-parser": "^3.13.0",
+    "topojson-client": "^3.1.0",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.7.2",
+    "@playwright/test": "^1.48.2",
+    "@types/d3-geo": "^3.1.0",
+    "@types/node": "^22.9.1",
+    "@types/topojson-client": "^3.1.5",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.15",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^1.6.0",
+    "vue-tsc": "^2.1.10"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}
