@@ -23,8 +23,9 @@ await useAsyncData('countries-hydrate', async () => {
 
 const countries = computed(() => countriesStore.items)
 
-const { data: homeData } = useHomeFeatured()
+const { data: homeData, pending: featuredPending } = useHomeFeatured()
 const featured = computed(() => homeData.value?.featured ?? [])
+const showSkeleton = computed(() => featuredPending.value && featured.value.length === 0)
 
 function goToCountry(payload: { code: string }) {
   router.push(`/country/${payload.code}`)
@@ -60,14 +61,12 @@ onMounted(() => {
       />
     </section>
 
-    <section v-if="featured.length > 0" class="flex flex-col gap-4">
+    <section v-if="featured.length > 0 || showSkeleton" class="flex flex-col gap-4">
       <h2 class="text-xl font-semibold text-ink dark:text-ink-dark">
         Latest across the world
       </h2>
-      <ArticleList
-        :articles="featured"
-        :ad-every-n="0"
-      />
+      <HomeFeaturedSkeleton v-if="showSkeleton" />
+      <ArticleList v-else :articles="featured" :ad-every-n="0" />
     </section>
   </div>
 </template>

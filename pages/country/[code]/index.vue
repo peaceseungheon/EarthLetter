@@ -27,17 +27,25 @@ if (!country.value) {
   throw createError({ statusCode: 404, statusMessage: 'NOT_FOUND' })
 }
 
-// Fetch latest 5 per topic in parallel. We call the same /api/articles endpoint
-// three times; Nitro route cache + SWR absorb the repetition.
-const topicResults = await Promise.all(
-  TOPIC_SLUGS.map(async (topic) => {
-    const { data } = await useFetch<ArticlesResponseDTO>('/api/articles', {
-      key: `country-${rawCode}-${topic}-top5`,
-      query: { country: rawCode, topic, page: 1, pageSize: 5 },
-      server: true
-    })
-    return { topic, items: data.value?.items ?? [] }
+// Fetch latest 5 per topic with lazy: true to avoid blocking navigation.
+const topicFetches = TOPIC_SLUGS.map((topic) => {
+  return useFetch<ArticlesResponseDTO>('/api/articles', {
+    key: `country-${rawCode}-${topic}-top5`,
+    query: { country: rawCode, topic, page: 1, pageSize: 5 },
+    server: true,
+    lazy: true
   })
+})
+
+const topicsPending = computed(() =>
+  topicFetches.some(f => f.pending.value)
+)
+
+const topicResults = computed(() =>
+  TOPIC_SLUGS.map((topic, i) => ({
+    topic,
+    items: topicFetches[i]!.data.value?.items ?? []
+  }))
 )
 
 useSiteSeo({
@@ -53,32 +61,35 @@ useSiteSeo({
 
     <AdSlot slot-id="country-leaderboard" format="horizontal" :min-height-px="90" />
 
-    <section
-      v-for="group in topicResults"
-      :key="group.topic"
-      class="flex flex-col gap-4"
-    >
-      <div class="flex items-end justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-ink dark:text-ink-dark">
-            {{ TOPIC_META[group.topic as TopicSlug].labelEn }}
-          </h2>
-          <p class="text-sm text-ink-muted dark:text-ink-dark-muted">
-            {{ TOPIC_META[group.topic as TopicSlug].description }}
-          </p>
+    <CountryOverviewSkeleton v-if="topicsPending" />
+    <template v-else>
+      <section
+        v-for="group in topicResults"
+        :key="group.topic"
+        class="flex flex-col gap-4"
+      >
+        <div class="flex items-end justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-ink dark:text-ink-dark">
+              {{ TOPIC_META[group.topic as TopicSlug].labelEn }}
+            </h2>
+            <p class="text-sm text-ink-muted dark:text-ink-dark-muted">
+              {{ TOPIC_META[group.topic as TopicSlug].description }}
+            </p>
+          </div>
+          <NuxtLink
+            :to="`/country/${country!.code}/${group.topic}`"
+            class="text-sm font-medium text-accent hover:underline"
+          >
+            View all →
+          </NuxtLink>
         </div>
-        <NuxtLink
-          :to="`/country/${country!.code}/${group.topic}`"
-          class="text-sm font-medium text-accent hover:underline"
-        >
-          View all →
-        </NuxtLink>
-      </div>
 
-      <ArticleList
-        :articles="group.items"
-        :ad-every-n="0"
-      />
-    </section>
+        <ArticleList
+          :articles="group.items"
+          :ad-every-n="0"
+        />
+      </section>
+    </template>
   </div>
 </template>
