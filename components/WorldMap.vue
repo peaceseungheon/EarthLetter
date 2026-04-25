@@ -47,12 +47,12 @@ try {
 const ACTIVE_PALETTE = [
   '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
   '#59a14f', '#edc948', '#b07aa1', '#ff9da7',
-  '#9c755f', '#bab0ac',
+  '#9c755f', '#bab0ac'
 ]
 const MUTED_PALETTE = [
   '#c8dce8', '#fde4c5', '#f5cbcc', '#c9e3e1',
   '#c5e1c2', '#f9f0d0', '#e5d5e3', '#ffdee2',
-  '#e2d4ce', '#ecebe8',
+  '#e2d4ce', '#ecebe8'
 ]
 
 function pickColorIndex(code: string | null, fallbackIndex: number): number {

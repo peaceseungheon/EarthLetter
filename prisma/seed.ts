@@ -25,7 +25,7 @@ interface CountrySeed {
 }
 
 interface TopicSeed {
-  slug: 'military' | 'economy' | 'politics'
+  slug: 'military' | 'economy' | 'politics' | 'environment' | 'technology' | 'health' | 'culture' | 'sports'
   label: string
 }
 
@@ -78,13 +78,47 @@ const COUNTRIES: CountrySeed[] = [
   // Africa (+3)
   { code: 'ZA', nameEn: 'South Africa', nameKo: '남아프리카 공화국' },
   { code: 'NG', nameEn: 'Nigeria', nameKo: '나이지리아' },
-  { code: 'EG', nameEn: 'Egypt', nameKo: '이집트' }
+  { code: 'EG', nameEn: 'Egypt', nameKo: '이집트' },
+
+  // --- Iteration 6 expansion: +20 countries → 50 total ---
+  // Asia-Pacific (+5)
+  { code: 'PK', nameEn: 'Pakistan',         nameKo: '파키스탄' },
+  { code: 'BD', nameEn: 'Bangladesh',        nameKo: '방글라데시' },
+  { code: 'LK', nameEn: 'Sri Lanka',         nameKo: '스리랑카' },
+  { code: 'KZ', nameEn: 'Kazakhstan',        nameKo: '카자흐스탄' },
+  { code: 'MM', nameEn: 'Myanmar',           nameKo: '미얀마' },
+
+  // Europe (+5)
+  { code: 'SE', nameEn: 'Sweden',            nameKo: '스웨덴' },
+  { code: 'NO', nameEn: 'Norway',            nameKo: '노르웨이' },
+  { code: 'CZ', nameEn: 'Czech Republic',    nameKo: '체코' },
+  { code: 'RO', nameEn: 'Romania',           nameKo: '루마니아' },
+  { code: 'HU', nameEn: 'Hungary',           nameKo: '헝가리' },
+
+  // Middle East & Africa (+5)
+  { code: 'IQ', nameEn: 'Iraq',              nameKo: '이라크' },
+  { code: 'LY', nameEn: 'Libya',             nameKo: '리비아' },
+  { code: 'ET', nameEn: 'Ethiopia',          nameKo: '에티오피아' },
+  { code: 'KE', nameEn: 'Kenya',             nameKo: '케냐' },
+  { code: 'TZ', nameEn: 'Tanzania',          nameKo: '탄자니아' },
+
+  // Americas (+5)
+  { code: 'VE', nameEn: 'Venezuela',         nameKo: '베네수엘라' },
+  { code: 'CL', nameEn: 'Chile',             nameKo: '칠레' },
+  { code: 'CO', nameEn: 'Colombia',          nameKo: '콜롬비아' },
+  { code: 'CU', nameEn: 'Cuba',              nameKo: '쿠바' },
+  { code: 'PE', nameEn: 'Peru',              nameKo: '페루' }
 ]
 
 const TOPICS: TopicSeed[] = [
-  { slug: 'military', label: 'Military & Security' },
-  { slug: 'economy', label: 'Economy' },
-  { slug: 'politics', label: 'Politics' }
+  { slug: 'military',    label: 'Military & Security' },
+  { slug: 'economy',     label: 'Economy' },
+  { slug: 'politics',    label: 'Politics' },
+  { slug: 'environment', label: 'Environment & Climate' },
+  { slug: 'technology',  label: 'Technology & Innovation' },
+  { slug: 'health',      label: 'Health & Medicine' },
+  { slug: 'culture',     label: 'Culture & Society' },
+  { slug: 'sports',      label: 'Sports' }
 ]
 
 // NOTE: feedUrl must be unique across the table (Source.feedUrl @unique).
@@ -872,7 +906,134 @@ const SOURCES: SourceSeed[] = [
     topicSlug: 'politics',
     name: 'Egypt Independent — News',
     feedUrl: 'https://egyptindependent.com/feed/' // REVIEW: verify URL
-  }
+  },
+
+  // ---------- environment ----------
+  { countryCode: 'US', topicSlug: 'environment', name: 'EPA News',                    feedUrl: 'https://www.epa.gov/rss/epa-news.xml' },
+  { countryCode: 'US', topicSlug: 'environment', name: 'Yale Environment 360',        feedUrl: 'https://e360.yale.edu/feed' },
+  { countryCode: 'GB', topicSlug: 'environment', name: 'BBC Science & Environment',   feedUrl: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml' },
+  { countryCode: 'DE', topicSlug: 'environment', name: 'DW Environment',              feedUrl: 'https://rss.dw.com/rdf/rss-en-environment' },
+  { countryCode: 'IN', topicSlug: 'environment', name: 'Down to Earth',               feedUrl: 'https://www.downtoearth.org.in/rss/latest-news' },
+  { countryCode: 'AU', topicSlug: 'environment', name: 'ABC Environment',             feedUrl: 'https://www.abc.net.au/news/feed/52498/rss.xml' }, // REVIEW
+  { countryCode: 'JP', topicSlug: 'environment', name: 'Japan Times — Environment',   feedUrl: 'https://www.japantimes.co.jp/tag/environment/feed/' },
+  { countryCode: 'FR', topicSlug: 'environment', name: 'Le Monde — Environment',      feedUrl: 'https://www.lemonde.fr/en/environment/rss_full.xml' }, // REVIEW
+
+  // ---------- technology ----------
+  { countryCode: 'US', topicSlug: 'technology', name: 'TechCrunch',                  feedUrl: 'https://techcrunch.com/feed/' },
+  { countryCode: 'US', topicSlug: 'technology', name: 'Wired',                        feedUrl: 'https://www.wired.com/feed/rss' },
+  { countryCode: 'GB', topicSlug: 'technology', name: 'The Register',                 feedUrl: 'https://www.theregister.com/headlines.atom' },
+  { countryCode: 'JP', topicSlug: 'technology', name: 'Japan Times — Technology',     feedUrl: 'https://www.japantimes.co.jp/tag/technology/feed/' },
+  { countryCode: 'KR', topicSlug: 'technology', name: 'Korea Herald — Tech',          feedUrl: 'https://koreaherald.com/common/rss_xml.php?ct=050100000000' }, // REVIEW
+  { countryCode: 'CN', topicSlug: 'technology', name: 'TechNode',                     feedUrl: 'https://technode.com/feed/' },
+  { countryCode: 'IN', topicSlug: 'technology', name: 'Inc42',                        feedUrl: 'https://inc42.com/feed/' },
+  { countryCode: 'DE', topicSlug: 'technology', name: 'DW Technology',                feedUrl: 'https://rss.dw.com/rdf/rss-en-tech' }, // REVIEW
+
+  // ---------- health ----------
+  { countryCode: 'US', topicSlug: 'health', name: 'STAT News',                        feedUrl: 'https://www.statnews.com/feed/' },
+  { countryCode: 'US', topicSlug: 'health', name: 'MedPage Today',                    feedUrl: 'https://www.medpagetoday.com/rss/headlines.xml' }, // REVIEW
+  { countryCode: 'GB', topicSlug: 'health', name: 'BBC Health',                        feedUrl: 'https://feeds.bbci.co.uk/news/health/rss.xml' },
+  { countryCode: 'IN', topicSlug: 'health', name: 'Times of India — Health',           feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/3908999.cms' }, // REVIEW
+  { countryCode: 'AU', topicSlug: 'health', name: 'The Conversation — Health',         feedUrl: 'https://theconversation.com/health/articles.atom' },
+  { countryCode: 'DE', topicSlug: 'health', name: 'DW Health',                         feedUrl: 'https://rss.dw.com/rdf/rss-en-health' }, // REVIEW
+
+  // ---------- culture ----------
+  { countryCode: 'US', topicSlug: 'culture', name: 'NPR Arts & Life',                 feedUrl: 'https://feeds.npr.org/1008/rss.xml' },
+  { countryCode: 'GB', topicSlug: 'culture', name: 'The Guardian — Culture',           feedUrl: 'https://www.theguardian.com/culture/rss' },
+  { countryCode: 'FR', topicSlug: 'culture', name: 'France 24 — Culture',              feedUrl: 'https://www.france24.com/en/culture/rss' },
+  { countryCode: 'JP', topicSlug: 'culture', name: 'Japan Today — Culture',            feedUrl: 'https://japantoday.com/category/arts-culture/feed' }, // REVIEW
+  { countryCode: 'KR', topicSlug: 'culture', name: 'Korea JoongAng Daily — Culture',  feedUrl: 'https://koreajoongangdaily.joins.com/rss' }, // REVIEW
+
+  // ---------- sports ----------
+  { countryCode: 'US', topicSlug: 'sports', name: 'ESPN Headlines',                   feedUrl: 'https://www.espn.com/espn/rss/news' },
+  { countryCode: 'GB', topicSlug: 'sports', name: 'BBC Sport',                         feedUrl: 'https://feeds.bbci.co.uk/sport/rss.xml' },
+  { countryCode: 'AU', topicSlug: 'sports', name: 'ABC Sport',                         feedUrl: 'https://www.abc.net.au/news/sport/feed' }, // REVIEW
+  { countryCode: 'IN', topicSlug: 'sports', name: 'Times of India — Sports',           feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/4719161.cms' }, // REVIEW
+  { countryCode: 'JP', topicSlug: 'sports', name: 'Japan Times — Sports',              feedUrl: 'https://www.japantimes.co.jp/tag/sports/feed/' },
+  { countryCode: 'KR', topicSlug: 'sports', name: 'Korea Herald — Sports',             feedUrl: 'https://koreaherald.com/common/rss_xml.php?ct=020200000000' }, // REVIEW
+  { countryCode: 'DE', topicSlug: 'sports', name: 'DW Sports',                         feedUrl: 'https://rss.dw.com/rdf/rss-en-sports' }, // REVIEW
+  { countryCode: 'FR', topicSlug: 'sports', name: 'France 24 — Sports',                feedUrl: 'https://www.france24.com/en/sport/rss' },
+
+  // ---------- Pakistan ----------
+  { countryCode: 'PK', topicSlug: 'politics', name: 'Dawn — Home',       feedUrl: 'https://www.dawn.com/feeds/home' },
+  { countryCode: 'PK', topicSlug: 'economy',  name: 'Dawn — Business',   feedUrl: 'https://www.dawn.com/feeds/business' },
+  { countryCode: 'PK', topicSlug: 'military', name: 'Geo News',           feedUrl: 'https://www.geo.tv/rss/1/breaking-news' }, // REVIEW
+
+  // ---------- Bangladesh ----------
+  { countryCode: 'BD', topicSlug: 'politics', name: 'The Daily Star BD', feedUrl: 'https://www.thedailystar.net/rss.xml' },
+  { countryCode: 'BD', topicSlug: 'economy',  name: 'The Financial Express BD', feedUrl: 'https://thefinancialexpress.com.bd/rss' }, // REVIEW
+
+  // ---------- Sri Lanka ----------
+  { countryCode: 'LK', topicSlug: 'politics', name: 'Daily Mirror LK',   feedUrl: 'https://www.dailymirror.lk/latest_news/rss' }, // REVIEW
+  { countryCode: 'LK', topicSlug: 'economy',  name: 'Daily FT',           feedUrl: 'https://www.ft.lk/feed/s1' }, // REVIEW
+
+  // ---------- Kazakhstan ----------
+  { countryCode: 'KZ', topicSlug: 'politics', name: 'Astana Times',       feedUrl: 'https://astanatimes.com/feed/' },
+  { countryCode: 'KZ', topicSlug: 'economy',  name: 'Silk Road Briefing', feedUrl: 'https://www.silkroadbriefing.com/news/feed/' }, // REVIEW
+
+  // ---------- Myanmar ----------
+  { countryCode: 'MM', topicSlug: 'politics', name: 'Myanmar Now',        feedUrl: 'https://myanmar-now.org/en/feed/' },
+  { countryCode: 'MM', topicSlug: 'politics', name: 'Irrawaddy',           feedUrl: 'https://www.irrawaddy.com/feed' },
+
+  // ---------- Sweden ----------
+  { countryCode: 'SE', topicSlug: 'politics', name: 'The Local Sweden',   feedUrl: 'https://www.thelocal.se/rss/articles' },
+  { countryCode: 'SE', topicSlug: 'economy',  name: 'Radio Sweden — Economy', feedUrl: 'https://sverigesradio.se/topplista/rsslink?programid=3304' }, // REVIEW
+  { countryCode: 'SE', topicSlug: 'military', name: 'Swedish Defence Research Agency', feedUrl: 'https://www.foi.se/en/foi/news/rss.xml' }, // REVIEW
+
+  // ---------- Norway ----------
+  { countryCode: 'NO', topicSlug: 'politics', name: 'The Local Norway',   feedUrl: 'https://www.thelocal.no/rss/articles' },
+  { countryCode: 'NO', topicSlug: 'economy',  name: 'Upstream Online',    feedUrl: 'https://www.upstreamonline.com/rss' }, // REVIEW
+
+  // ---------- Czech Republic ----------
+  { countryCode: 'CZ', topicSlug: 'politics', name: 'Radio Prague International', feedUrl: 'https://english.radio.cz/export/rss-all.php' },
+  { countryCode: 'CZ', topicSlug: 'economy',  name: 'Prague Business Journal', feedUrl: 'https://www.praguebusinessjournal.com/feed/' }, // REVIEW
+
+  // ---------- Romania ----------
+  { countryCode: 'RO', topicSlug: 'politics', name: 'Nine O\'Clock RO',  feedUrl: 'https://www.nineoclock.ro/feed/' },
+  { countryCode: 'RO', topicSlug: 'economy',  name: 'Romania Insider',    feedUrl: 'https://www.romania-insider.com/feed' },
+
+  // ---------- Hungary ----------
+  { countryCode: 'HU', topicSlug: 'politics', name: 'Hungary Today',      feedUrl: 'https://hungarytoday.hu/feed/' },
+  { countryCode: 'HU', topicSlug: 'economy',  name: 'Budapest Business Journal', feedUrl: 'https://bbj.hu/rss' }, // REVIEW
+
+  // ---------- Iraq ----------
+  { countryCode: 'IQ', topicSlug: 'politics', name: 'Al-Monitor — Iraq', feedUrl: 'https://www.al-monitor.com/rss/topics/iraq.xml' }, // REVIEW
+  { countryCode: 'IQ', topicSlug: 'military', name: 'Iraq News Network',  feedUrl: 'https://www.iraqnewsnetwork.net/feed/' }, // REVIEW
+
+  // ---------- Libya ----------
+  { countryCode: 'LY', topicSlug: 'politics', name: 'Libya Herald',       feedUrl: 'https://www.libyaherald.com/feed/' },
+  { countryCode: 'LY', topicSlug: 'military', name: 'Libya Observer',     feedUrl: 'https://www.libyaobserver.ly/feed' }, // REVIEW
+
+  // ---------- Ethiopia ----------
+  { countryCode: 'ET', topicSlug: 'politics', name: 'Addis Standard',     feedUrl: 'https://addisstandard.com/feed/' },
+  { countryCode: 'ET', topicSlug: 'economy',  name: 'The Reporter Ethiopia', feedUrl: 'https://www.thereporterethiopia.com/feed' },
+
+  // ---------- Kenya ----------
+  { countryCode: 'KE', topicSlug: 'politics', name: 'Nation Africa KE',   feedUrl: 'https://nation.africa/kenya/rss.xml' }, // REVIEW
+  { countryCode: 'KE', topicSlug: 'economy',  name: 'Business Daily Africa', feedUrl: 'https://www.businessdailyafrica.com/rss' }, // REVIEW
+
+  // ---------- Tanzania ----------
+  { countryCode: 'TZ', topicSlug: 'politics', name: 'The Citizen TZ',     feedUrl: 'https://www.thecitizen.co.tz/tanzania/rss.xml' }, // REVIEW
+  { countryCode: 'TZ', topicSlug: 'economy',  name: 'The East African',   feedUrl: 'https://www.theeastafrican.co.ke/rss' }, // REVIEW
+
+  // ---------- Venezuela ----------
+  { countryCode: 'VE', topicSlug: 'politics', name: 'Caracas Chronicles', feedUrl: 'https://www.caracaschronicles.com/feed/' },
+  { countryCode: 'VE', topicSlug: 'economy',  name: 'Venezuela Analysis', feedUrl: 'https://venezuelanalysis.com/feed' },
+
+  // ---------- Chile ----------
+  { countryCode: 'CL', topicSlug: 'politics', name: 'Santiago Times',     feedUrl: 'https://santiagotimes.cl/feed/' },
+  { countryCode: 'CL', topicSlug: 'economy',  name: 'BN Americas — Chile', feedUrl: 'https://www.bnamericas.com/rss/news/chile.xml' }, // REVIEW
+
+  // ---------- Colombia ----------
+  { countryCode: 'CO', topicSlug: 'politics', name: 'Colombia Reports',   feedUrl: 'https://colombiareports.com/feed/' },
+  { countryCode: 'CO', topicSlug: 'economy',  name: 'BN Americas — Colombia', feedUrl: 'https://www.bnamericas.com/rss/news/colombia.xml' }, // REVIEW
+
+  // ---------- Cuba ----------
+  { countryCode: 'CU', topicSlug: 'politics', name: 'Havana Times',       feedUrl: 'https://havanatimes.org/feed/' },
+  { countryCode: 'CU', topicSlug: 'politics', name: '14ymedio',           feedUrl: 'https://www.14ymedio.com/rss.xml' }, // REVIEW: may be Spanish
+
+  // ---------- Peru ----------
+  { countryCode: 'PE', topicSlug: 'politics', name: 'Peru Reports',       feedUrl: 'https://perureports.com/feed/' }, // REVIEW
+  { countryCode: 'PE', topicSlug: 'economy',  name: 'Andina — Peru News', feedUrl: 'https://andina.pe/RSS/rss.aspx?id=4' } // REVIEW
 ]
 
 async function main() {

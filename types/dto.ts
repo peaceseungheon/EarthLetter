@@ -9,7 +9,15 @@
 // import from this module via the `~/types/dto` alias. Do not re-declare
 // these shapes anywhere else.
 
-export type TopicSlug = 'military' | 'economy' | 'politics'
+export type TopicSlug =
+  | 'military'
+  | 'economy'
+  | 'politics'
+  | 'environment'
+  | 'technology'
+  | 'health'
+  | 'culture'
+  | 'sports'
 
 export type IsoCountryCode = string // ISO-3166 alpha-2; runtime validated
 
@@ -59,6 +67,18 @@ export interface CountryDTO {
   nameKo: string | null
   hasSources: boolean // false → map renders dimmed + non-clickable
   sourceCount: number // optional UX hint, always present
+}
+
+// ---------- Trends ----------
+
+export interface TrendDataPointDTO {
+  topic: string   // TopicSlug value
+  date: string    // ISO date "YYYY-MM-DD"
+  count: number
+}
+
+export interface TrendsResponseDTO {
+  items: TrendDataPointDTO[]
 }
 
 // ---------- Response envelopes ----------

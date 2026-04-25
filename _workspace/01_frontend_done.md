@@ -1,16 +1,50 @@
-# 01_frontend_done — 로딩 UI 구현 완료
+# Frontend Done — 이터레이션 6
 
-## 신규 파일
-- components/LoadingSpinner.vue
-- components/skeletons/HomeFeaturedSkeleton.vue
-- components/skeletons/CountryOverviewSkeleton.vue
+**날짜:** 2026-04-25
+**담당:** frontend-dev
 
-## 수정 파일
-- layouts/default.vue — NuxtLoadingIndicator 추가
-- pages/index.vue — pending 분기 추가
-- pages/country/[code]/index.vue — lazy fetch + CountryOverviewSkeleton
+---
 
-## 특이사항
-- `pages/country/[code]/index.vue`: 기존 `await Promise.all(TOPIC_SLUGS.map(...))` 패턴을 `useFetch(..., { lazy: true })` 배열로 전환. `topicResults`는 computed로, `topicsPending`은 `some(f => f.pending.value)` 집계 computed로 처리.
-- `LoadingSpinner.vue`: `computed(() => sizeMap[props.size]).value` destructure 대신 `sizeConfig` computed ref를 템플릿에서 직접 참조하는 방식으로 구현하여 TS 오류 방지.
-- `components/skeletons/` 디렉토리 신규 생성.
+## 생성/수정한 파일 목록
+
+### 수정
+- `types/dto.ts` — TopicSlug 유니온 8개 확장 + TrendDataPointDTO, TrendsResponseDTO 추가
+- `types/domain.ts` — TOPIC_SLUGS(8개), TOPIC_META(8개) 확장
+- `tests/unit/domain.spec.ts` — isTopicSlug describe 블록 교체 (8개 토픽 기준)
+- `tests/api/articles-validation.spec.ts` — TOPICS 상수 8개 + 'sports'→'finance' 리젝 테스트 수정 + 신규 토픽 수락 테스트 추가
+- `components/TopicTabs.vue` — Trends 탭 NuxtLink 추가 (useRoute 기반 active)
+- `server/utils/services/sourceAdmin.ts` — ValidatedCreateInput.topicSlug 및 validateTopicSlug 반환 타입을 TopicSlug로 갱신 (TopicSlug 확장에 의한 필수 수정)
+
+### 신규 생성
+- `components/skeletons/CountryTrendsSkeleton.vue`
+- `components/CountryTrendsChart.vue`
+- `pages/country/[code]/trends.vue`
+
+### 의존성 추가
+- `chart.js@4.5.1`
+- `vue-chartjs@5.3.3`
+
+---
+
+## pnpm typecheck 결과
+
+```
+PASS — no errors
+```
+
+---
+
+## pnpm test 결과
+
+```
+Test Files  10 passed (10)
+Tests       67 passed (67)
+```
+
+모든 테스트 통과 (domain, articles-validation, trends-validation 포함).
+
+---
+
+## 미완성 항목
+
+없음. 담당 프론트엔드 작업 전체 완료.

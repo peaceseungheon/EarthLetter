@@ -35,7 +35,12 @@ export function isIsoCountryCode(value: string): value is IsoCountryCode {
 export const TOPIC_SLUGS: readonly TopicSlug[] = [
   'military',
   'economy',
-  'politics'
+  'politics',
+  'environment',
+  'technology',
+  'health',
+  'culture',
+  'sports'
 ] as const
 
 export interface TopicMeta {
@@ -59,6 +64,31 @@ export const TOPIC_META: Record<TopicSlug, TopicMeta> = {
     slug: 'politics',
     labelEn: 'Politics',
     description: 'Government, elections, and diplomatic affairs.'
+  },
+  environment: {
+    slug: 'environment',
+    labelEn: 'Environment',
+    description: 'Climate, energy, and environmental policy.'
+  },
+  technology: {
+    slug: 'technology',
+    labelEn: 'Technology',
+    description: 'Innovation, tech industry, and digital society.'
+  },
+  health: {
+    slug: 'health',
+    labelEn: 'Health',
+    description: 'Public health, medicine, and healthcare systems.'
+  },
+  culture: {
+    slug: 'culture',
+    labelEn: 'Culture',
+    description: 'Society, arts, and cultural affairs.'
+  },
+  sports: {
+    slug: 'sports',
+    labelEn: 'Sports',
+    description: 'National and international sporting events.'
   }
 }
 

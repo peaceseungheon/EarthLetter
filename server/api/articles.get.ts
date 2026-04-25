@@ -6,7 +6,10 @@ import type { ArticlesResponseDTO, TopicSlug } from '~/types/dto'
 import { findArticles } from '../utils/repositories/articles'
 import { countryExists } from '../utils/repositories/countries'
 
-const TOPICS: readonly TopicSlug[] = ['military', 'economy', 'politics'] as const
+const TOPICS: readonly TopicSlug[] = [
+  'military', 'economy', 'politics',
+  'environment', 'technology', 'health', 'culture', 'sports'
+] as const
 const ISO_ALPHA2 = /^[A-Z]{2}$/
 
 function parsePositiveInt(raw: unknown, fallback: number, max?: number): number {
@@ -35,7 +38,7 @@ export default defineEventHandler(async (event): Promise<ArticlesResponseDTO> =>
 
   const topic = String(query.topic ?? '') as TopicSlug
   if (!TOPICS.includes(topic)) {
-    throw bad('BAD_REQUEST', 'Query param "topic" must be one of military|economy|politics.')
+    throw bad('BAD_REQUEST', `Query param "topic" must be one of ${[...TOPICS].join('|')}.`)
   }
 
   const page = parsePositiveInt(query.page, 1)

@@ -12,7 +12,8 @@ import { isTopicSlug } from '~/types/domain'
 import type {
   AdminSourceCreateDTO,
   AdminSourceDTO,
-  AdminSourcePatchDTO
+  AdminSourcePatchDTO,
+  TopicSlug
 } from '~/types/dto'
 import { countryExists } from '../repositories/countries'
 import {
@@ -88,11 +89,11 @@ function validateCountryCode(raw: unknown): string {
   return code
 }
 
-function validateTopicSlug(raw: unknown): 'military' | 'economy' | 'politics' {
+function validateTopicSlug(raw: unknown): TopicSlug {
   if (typeof raw !== 'string' || !isTopicSlug(raw)) {
     badRequest('Field "topicSlug" must be one of military|economy|politics.')
   }
-  return raw
+  return raw as TopicSlug
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +102,7 @@ function validateTopicSlug(raw: unknown): 'military' | 'economy' | 'politics' {
 
 export interface ValidatedCreateInput extends AdminSourceCreateDTO {
   countryCode: string
-  topicSlug: 'military' | 'economy' | 'politics'
+  topicSlug: TopicSlug
   name: string
   feedUrl: string
 }

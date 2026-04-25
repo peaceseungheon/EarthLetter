@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import type { TopicSlug } from '~/types/dto'
 import { TOPIC_META, TOPIC_SLUGS } from '~/types/domain'
 
@@ -7,6 +9,9 @@ interface Props {
   active?: TopicSlug
 }
 defineProps<Props>()
+
+const route = useRoute()
+const isTrendsActive = computed(() => route.path.endsWith('/trends'))
 </script>
 
 <template>
@@ -29,6 +34,20 @@ defineProps<Props>()
       "
     >
       {{ TOPIC_META[slug].labelEn }}
+    </NuxtLink>
+
+    <NuxtLink
+      :to="`/country/${countryCode.toUpperCase()}/trends`"
+      role="tab"
+      :aria-selected="isTrendsActive"
+      class="inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      :class="
+        isTrendsActive
+          ? 'border-accent bg-accent text-white shadow-sm'
+          : 'border-black/10 bg-surface text-ink hover:bg-surface-muted dark:border-white/15 dark:bg-surface-dark-muted dark:text-ink-dark dark:hover:bg-surface-dark'
+      "
+    >
+      Trends
     </NuxtLink>
   </nav>
 </template>

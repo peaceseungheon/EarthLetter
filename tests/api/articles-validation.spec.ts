@@ -6,7 +6,10 @@
 import { describe, it, expect } from 'vitest'
 
 const ISO_ALPHA2 = /^[A-Z]{2}$/
-const TOPICS = new Set(['military', 'economy', 'politics'])
+const TOPICS = new Set([
+  'military', 'economy', 'politics',
+  'environment', 'technology', 'health', 'culture', 'sports'
+])
 
 function parsePositiveInt(
   raw: unknown,
@@ -65,8 +68,13 @@ describe('/api/articles query validation', () => {
   })
 
   it('rejects unknown topics', () => {
-    const r = validate({ country: 'US', topic: 'sports' })
+    const r = validate({ country: 'US', topic: 'finance' })
     expect(r).toEqual({ ok: false, reason: 'topic' })
+  })
+
+  it('accepts new topic slugs (e.g. sports, environment)', () => {
+    expect(validate({ country: 'US', topic: 'sports' }).ok).toBe(true)
+    expect(validate({ country: 'US', topic: 'environment' }).ok).toBe(true)
   })
 
   it('rejects non-alpha-2 country', () => {

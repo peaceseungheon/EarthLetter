@@ -8,14 +8,18 @@ import {
 } from '../../types/domain'
 
 describe('isTopicSlug', () => {
-  it('accepts the three canonical slugs', () => {
-    expect(isTopicSlug('military')).toBe(true)
-    expect(isTopicSlug('economy')).toBe(true)
-    expect(isTopicSlug('politics')).toBe(true)
+  it('accepts all eight canonical slugs', () => {
+    const valid = [
+      'military', 'economy', 'politics',
+      'environment', 'technology', 'health', 'culture', 'sports'
+    ]
+    for (const slug of valid) {
+      expect(isTopicSlug(slug)).toBe(true)
+    }
   })
 
   it('rejects unknown slugs', () => {
-    expect(isTopicSlug('sports')).toBe(false)
+    expect(isTopicSlug('finance')).toBe(false)
     expect(isTopicSlug('')).toBe(false)
     expect(isTopicSlug('MILITARY')).toBe(false)
   })
