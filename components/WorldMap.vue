@@ -43,11 +43,31 @@ try {
   topo.value = null
 }
 
+// Distinct enough that adjacent countries rarely share a color
+const ACTIVE_PALETTE = [
+  '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
+  '#59a14f', '#edc948', '#b07aa1', '#ff9da7',
+  '#9c755f', '#bab0ac',
+]
+const MUTED_PALETTE = [
+  '#c8dce8', '#fde4c5', '#f5cbcc', '#c9e3e1',
+  '#c5e1c2', '#f9f0d0', '#e5d5e3', '#ffdee2',
+  '#e2d4ce', '#ecebe8',
+]
+
+function pickColorIndex(code: string | null, fallbackIndex: number): number {
+  if (!code) return fallbackIndex % ACTIVE_PALETTE.length
+  let hash = 0
+  for (const ch of code) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff
+  return Math.abs(hash) % ACTIVE_PALETTE.length
+}
+
 interface MapShape {
   code: string | null
   name: string
   d: string
   clickable: boolean
+  fill: string
 }
 
 const shapes = computed<MapShape[]>(() => {
@@ -84,8 +104,10 @@ const shapes = computed<MapShape[]>(() => {
 
     const country = code ? sourcesByCode.get(code) : undefined
     const clickable = Boolean(country?.hasSources)
+    const ci = pickColorIndex(code, out.length)
+    const fill = clickable ? ACTIVE_PALETTE[ci] : MUTED_PALETTE[ci]
 
-    out.push({ code, name, d, clickable })
+    out.push({ code, name, d, clickable, fill })
   }
   return out
 })
@@ -133,11 +155,12 @@ function onMouseLeave() {
           :key="shape.code ?? `shape-${i}`"
           :d="shape.d"
           :data-code="shape.code ?? undefined"
+          :style="{ fill: shape.fill }"
           :class="[
             'transition-colors',
             shape.clickable
-              ? 'cursor-pointer fill-[var(--map-fill-active)] hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
-              : 'fill-[var(--map-fill-muted)] cursor-default',
+              ? 'cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+              : 'cursor-default',
           ]"
           :tabindex="shape.clickable ? 0 : -1"
           :role="shape.clickable ? 'button' : 'presentation'"
