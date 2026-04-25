@@ -14,6 +14,7 @@
 | 3 | 2026-04-25 | Feature K — 아티클 상세 페이지 + RSS full-content | ✅ 완료 |
 | 4 | 2026-04-25 | WorldMap UX — 국가 탐색 UI 고도화 | ✅ 완료 |
 | 5 | 2026-04-25 | 로딩 UI 보강 — 페이지 네비게이션 & 데이터 fetch 피드백 | ✅ 완료 |
+| 6 | 2026-04-25 | 커버리지 확장 + 국가별 트렌드 탭 | ✅ 완료 |
 
 ---
 
@@ -114,6 +115,24 @@
 | **칩 스트립** | 커버 국가 목록을 칩(chip) 형태로 나열, 클릭 시 해당 국가로 이동 |
 | **맥동 애니메이션** | 커버 국가 위에 pulsing 애니메이션 — 시각적 주목도 강화 |
 | **주요 파일** | `components/WorldMap.vue` |
+
+---
+
+### 6. 커버리지 확장 + 국가별 트렌드 탭 `2026-04-25`
+
+**목표:** 토픽·국가 커버리지 확대 및 국가 페이지에 토픽별 기사량 트렌드 차트 탭 추가.
+
+| 분류 | 내용 |
+|------|------|
+| **TopicSlug 확장** | 3개 → 8개: environment, technology, health, culture, sports 추가 |
+| **국가 확장** | 30개국 → 50개국 (+20: 아시아·유럽·중동·아프리카·아메리카) |
+| **신규 API** | `GET /api/countries/:code/trends?days=7\|30\|90` — Prisma `$queryRaw` 집계, SWR 1시간 |
+| **신규 리포지토리** | `server/utils/repositories/trends.ts` — `findTrends()` |
+| **신규 컴포넌트** | `CountryTrendsChart.vue` (chart.js 라인 차트 + 7d/30d/90d 토글), `CountryTrendsSkeleton.vue` |
+| **신규 페이지** | `pages/country/[code]/trends.vue` — SSR + lazy chart fetch |
+| **수정 컴포넌트** | `TopicTabs.vue` — Trends 탭 추가 (`useRoute` active 감지) |
+| **타입 변경** | `TopicSlug` 유니온 8개, `TrendDataPointDTO`, `TrendsResponseDTO` 추가 |
+| **의존성 추가** | `chart.js@4.5.1`, `vue-chartjs@5.3.3` |
 
 ---
 
