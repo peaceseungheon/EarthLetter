@@ -17,7 +17,8 @@ export default defineNuxtConfig({
     '@nuxtjs/sitemap',
     '@nuxtjs/robots',
     '@nuxt/eslint',
-    '@nuxt/ui'
+    '@nuxt/ui',
+    '@vercel/analytics'
   ],
 
   typescript: {
@@ -71,15 +72,13 @@ export default defineNuxtConfig({
     '/': {
       swr: 300,
       headers: {
-        'Cache-Control':
-          'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
+        'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
       }
     },
     '/country/**': {
       swr: 600,
       headers: {
-        'Cache-Control':
-          'public, max-age=0, s-maxage=600, stale-while-revalidate=1800'
+        'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=1800'
       }
     },
     '/about': { prerender: true },
