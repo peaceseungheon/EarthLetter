@@ -6,6 +6,7 @@
 
 import pLimit from 'p-limit'
 import Parser from 'rss-parser'
+import { sanitizeArticleHtml } from './sanitize'
 
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
 
@@ -15,18 +16,33 @@ export interface ParsedFeedItem {
   contentSnippet: string | null
   enclosureUrl: string | null
   publishedAt: Date
+  contentHtml: string | null
 }
 
 export interface ParsedFeed {
   items: ParsedFeedItem[]
 }
 
-const parser = new Parser({
+type RssItemRaw = {
+  title?: string
+  link?: string
+  isoDate?: string
+  pubDate?: string
+  contentSnippet?: string
+  content?: string
+  'content:encoded'?: string
+  enclosure?: { url?: string }
+}
+
+const parser: Parser<unknown, RssItemRaw> = new Parser({
   timeout: 10_000,
   headers: {
     'User-Agent':
       'EarthLetterBot/0.1 (+https://github.com/ — news aggregation; contact via site)',
     Accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5'
+  },
+  customFields: {
+    item: [['content:encoded', 'content:encoded']]
   }
 })
 
@@ -84,16 +100,24 @@ export async function fetchFeed(
       const snippet = (item.contentSnippet ?? '').trim()
 
       // enclosure can be MediaRSS, <enclosure>, or raw <media:content>
-      type EnclosureLike = { url?: string }
-      const enclosure = (item as { enclosure?: EnclosureLike }).enclosure
-      const enclosureUrl = enclosure?.url ?? null
+      const enclosureUrl = item.enclosure?.url ?? null
+
+      // Prefer <content:encoded> (full HTML), fall back to <content>.
+      // sanitizeArticleHtml enforces allow-list + size caps and returns null
+      // when the output is empty / too short to be useful.
+      const rawHtml = item['content:encoded'] ?? item.content ?? null
+      const contentHtml =
+        typeof rawHtml === 'string' && rawHtml.trim()
+          ? sanitizeArticleHtml(rawHtml)
+          : null
 
       items.push({
         title,
         link,
         contentSnippet: snippet ? snippet.slice(0, 500) : null,
         enclosureUrl,
-        publishedAt: published
+        publishedAt: published,
+        contentHtml
       })
     }
 

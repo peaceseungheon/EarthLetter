@@ -1,491 +1,517 @@
-# EarthLetter — Architecture Blueprint v1.1 (Phase 3)
+# EarthLetter — Architecture Blueprint v1.2 (Feature K)
 
-**Author:** architect agent
-**Date:** 2026-04-24
-**Status:** Ready for parallel implementation (backend-dev + frontend-dev). Contract-frozen DTOs in § 3.
-**Prior art:** `_workspace_prev/00_architecture.md` (MVP), `_workspace_prev/01_frontend_done.md`, `_workspace_prev/02_backend_done.md`.
-
-This document specifies three additive features: **E. Admin Dashboard**, **F. Source Auto-Disable**, **G. Country Coverage Expansion**. MVP behavior and DTOs (§ 4 of v1.0) remain unchanged except where § 3 of this doc explicitly extends them.
+> Feature K — 아티클 상세 페이지 + RSS full-content 지원
+> Option B: `contentHtml` 유무로 내부 상세 페이지 vs 원문 새 탭 분기
+> Parent blueprint: v1.1 (Features E–G). This doc amends § 3, § 4, § 5, § 8.
 
 ---
 
 ## 1. Directory Structure (delta only)
 
-New files and files that require modification. Unchanged files from the MVP tree are omitted.
+v1.1 대비 추가/변경되는 경로만 명시. 그 외는 v1.1과 동일.
 
 ```
-EarthLetter/
+earthletter/
 ├── prisma/
-│   ├── schema.prisma                       # MODIFY: Source adds failCount, disabledAt, lastFailedAt, createdAt
-│   ├── migrations/
-│   │   └── 20260424_source_autodisable/    # NEW: Prisma migration
-│   │       └── migration.sql
-│   └── seed.ts                             # MODIFY: 10 → 30 countries (Feature G)
-│
+│   ├── schema.prisma                          # [MODIFIED] Article.contentHtml 추가
+│   └── migrations/
+│       └── 20260424xxxxxx_article_content_html/ # [NEW]
+│           └── migration.sql
 ├── server/
 │   ├── api/
-│   │   └── admin/                          # NEW subtree (bearer-gated, noindex)
-│   │       ├── session.post.ts             # POST /api/admin/session  (issue cookie)
-│   │       ├── session/
-│   │       │   └── logout.post.ts          # POST /api/admin/session/logout
-│   │       ├── sources.get.ts              # GET  /api/admin/sources
-│   │       ├── sources.post.ts             # POST /api/admin/sources
-│   │       └── sources/
-│   │           ├── [id].patch.ts           # PATCH /api/admin/sources/:id
-│   │           └── [id].delete.ts          # DELETE /api/admin/sources/:id
+│   │   └── articles/
+│   │       └── [id].get.ts                    # [NEW] 단일 기사 상세 (public, no-auth)
 │   ├── utils/
-│   │   ├── auth.ts                         # MODIFY: add requireAdminSession()
+│   │   ├── rss.ts                              # [MODIFIED] ParsedFeedItem.contentHtml 추가
+│   │   ├── sanitize.ts                         # [NEW] 서버 사이드 HTML sanitize (sanitize-html)
 │   │   ├── repositories/
-│   │   │   └── sources.ts                  # MODIFY: add admin CRUD + failure bookkeeping
+│   │   │   └── articles.ts                     # [MODIFIED] findArticleById + upsert 확장 + hasContent
 │   │   └── services/
-│   │       ├── ingest.ts                   # MODIFY: failure/success bookkeeping, autoDisabled count
-│   │       └── sourceAdmin.ts              # NEW: create/update/delete orchestration + validation
-│
-├── pages/
-│   └── admin/
-│       └── index.vue                       # NEW: /admin — source table with filters + toggle + create + delete
-│
-├── layouts/
-│   └── admin.vue                           # NEW: admin shell with token-gate + noindex meta
-│
+│   │       └── ingest.ts                       # [MODIFIED] contentHtml을 upsert 입력에 포함
 ├── components/
-│   └── admin/                              # NEW subtree
-│       ├── AdminTokenGate.vue              # NEW: single-field token prompt (stored in session cookie)
-│       ├── SourceTable.vue                 # NEW: list + filters + sort
-│       ├── SourceRow.vue                   # NEW: single row with toggle / delete actions
-│       ├── SourceFormDialog.vue            # NEW: create/edit form (headless UI dialog)
-│       ├── ConfirmDeleteDialog.vue         # NEW: delete confirmation (warns if articleCount > 0)
-│       └── AdminEmptyState.vue             # NEW: first-use placeholder
-│
-├── composables/
-│   ├── useAdminAuth.ts                     # NEW: client-side cookie set/get + logout
-│   └── useAdminSources.ts                  # NEW: wraps /api/admin/sources fetch + mutations
-│
-├── stores/
-│   └── adminSources.ts                     # NEW: Pinia store (list, filters, CRUD optimistic updates)
-│
+│   ├── ArticleCard.vue                         # [MODIFIED] hasContent 분기 라우팅
+│   └── ArticleContent.vue                      # [NEW] sanitized HTML 렌더링 전용 (v-html 격리)
+├── pages/
+│   └── article/
+│       └── [id].vue                            # [NEW] 상세 페이지 (SSR)
 ├── types/
-│   ├── dto.ts                              # MODIFY: add admin DTOs + IngestResponseDTO.autoDisabled
-│   └── domain.ts                           # (no change)
-│
-├── tests/
-│   ├── api/
-│   │   ├── admin-sources.spec.ts           # NEW: CRUD + 401 + delete-with-articles warning
-│   │   └── ingest.spec.ts                  # MODIFY: failCount increment + auto-disable path
-│   ├── unit/
-│   │   └── source-admin.spec.ts            # NEW: validation (ISO-2, topic, URL), delete-count
-│   └── e2e/
-│       └── admin-flow.spec.ts              # NEW: token gate → list → toggle → create → delete
-│
-└── .env.example                            # MODIFY: document cookie name + INGEST_SECRET dual use
+│   └── dto.ts                                  # [MODIFIED] ArticleDTO.hasContent, ArticleDetailDTO 추가
+└── tests/
+    ├── unit/
+    │   ├── sanitize.spec.ts                    # [NEW]
+    │   └── ingest-content.spec.ts              # [NEW]
+    └── e2e/
+        └── article-detail.spec.ts              # [NEW]
 ```
+
+**요약**: 신규 파일 6개, 수정 파일 6개. DB 마이그레이션 1건.
 
 ---
 
-## 2. DB Schema Changes (Feature F)
+## 2. DB Schema Changes
 
-### 2.1 Prisma model delta
+### 2.1 Article 모델 확장
 
 ```prisma
-model Source {
-  id          Int       @id @default(autoincrement())
-  countryCode String
-  topicSlug   String
-  name        String
-  feedUrl     String    @unique
-  enabled     Boolean   @default(true)
-
-  // --- NEW (Feature F) ---
-  failCount     Int       @default(0)   // consecutive fetch-failure counter
-  lastFailedAt  DateTime?               // most recent failure timestamp
-  disabledAt    DateTime?               // non-null iff auto-disabled (audit trail)
-  // --- NEW (Feature E) ---
-  createdAt     DateTime  @default(now())
-
-  country  Country   @relation(fields: [countryCode], references: [code])
-  topic    Topic     @relation(fields: [topicSlug], references: [slug])
-  articles Article[]
-
-  @@index([countryCode, topicSlug])
-  @@index([enabled, disabledAt])        // NEW: used by admin list filter
-}
-
 model Article {
-  // ...existing fields...
-  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)  // MODIFY: add Cascade
+  id          String   @id
+  sourceId    Int
+  title       String
+  summary     String?
+  link        String   @unique
+  imageUrl    String?
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+
+  // ---- Feature K 추가 ----
+  contentHtml String?  @db.Text   // sanitized RSS content:encoded HTML. null이면 원문 새 탭.
+  // ---- End Feature K ----
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId, publishedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc)])
 }
 ```
 
-### 2.2 Migration semantics
+### 2.2 `hasContent` 표현 방식 — 컬럼 추가 불필요
 
-- Migration name: `20260424_source_autodisable`
-- **Additive only.** All new columns are nullable or have defaults → zero downtime.
-- Command: `pnpm prisma migrate dev --name source_autodisable` (local), `prisma migrate deploy` in CI/CD.
-- Cascade FK change SQL: `ALTER TABLE "Article" DROP CONSTRAINT "Article_sourceId_fkey", ADD CONSTRAINT "Article_sourceId_fkey" FOREIGN KEY ("sourceId") REFERENCES "Source"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
+`hasContent Boolean` 컬럼을 **추가하지 않는다**. 사유:
+- `Boolean(a.contentHtml)`로 저장소 계층에서 DTO에 매핑
+- 중복 컬럼은 동기화 버그 표면적을 키운다 (single-source-of-truth)
 
-### 2.3 Failure semantics matrix
+### 2.3 인덱스
 
-| Event | `enabled` | `failCount` | `disabledAt` | `lastFailedAt` |
-|-------|-----------|-------------|--------------|----------------|
-| Fetch success | unchanged | reset to `0` | unchanged | unchanged |
-| Fetch failure, count < 5 after increment | unchanged (true) | +1 | unchanged (null) | set to `now()` |
-| Fetch failure, count == 5 after increment | set to `false` | 5 | set to `now()` | set to `now()` |
-| Admin re-enables | set to `true` | reset to `0` | reset to `null` | unchanged |
-| Admin disables manually | set to `false` | unchanged | unchanged (null — distinguishes manual from auto) | unchanged |
+추가 인덱스 **불필요**. 이유:
+- 목록 조회 쿼리에서 `contentHtml`을 WHERE 조건으로 쓰지 않는다
+- `@db.Text` 는 행 외부에 TOAST 저장되므로 목록 쿼리 비용에 영향이 거의 없다 (§ 2.4 주의사항 참고)
 
-**Invariant:** `disabledAt IS NOT NULL` → `enabled = false`. The reverse is NOT true (manual disable leaves `disabledAt = null`).
+### 2.4 목록 쿼리 성능 보호 — `select` 명시 필수 ⚠️
 
-### 2.4 Threshold constant
+`findArticles`, `findLatestAcrossSources`는 **반드시** `select`로 `contentHtml`을 제외한다.
 
-```ts
-const AUTO_DISABLE_THRESHOLD = 5  // server/utils/services/ingest.ts
-```
+**위험**: Prisma 기본 동작은 모든 스칼라 컬럼 포함 → Feature K 이후 목록 API 페이로드에 HTML 본문이 딸려옴 → 50건 × 최대 50KB = 2.5MB 잠재 회귀.
 
----
+**조치**: 쿼리 단에서 명시 제외.
 
-## 3. API Contract (DTO delta)
+### 2.5 목록 응답의 `hasContent` 계산 — "두 단계 쿼리" 패턴
 
-All additions go to `types/dto.ts`. Existing shapes unchanged.
-
-### 3.1 Admin source DTOs (NEW)
+`contentHtml` 본문을 전송하지 않으면서 존재 여부만 반환:
 
 ```ts
-export interface AdminSourceDTO {
-  id: number
-  countryCode: IsoCountryCode
-  topicSlug: TopicSlug
-  name: string
-  feedUrl: string
-  enabled: boolean
-  failCount: number
-  lastFailedAt: string | null     // ISO-8601 or null
-  disabledAt: string | null       // ISO-8601 or null (null = manual or never disabled)
-  articleCount: number            // count of linked Article rows (for delete warning)
-  createdAt: string               // ISO-8601
-}
-
-export interface AdminSourcesQueryDTO {
-  country?: IsoCountryCode
-  topic?: TopicSlug
-  enabled?: 'true' | 'false' | 'all'          // default 'all'
-  disabled?: 'auto' | 'manual' | 'any'         // auto = disabledAt != null; manual = enabled=false && disabledAt=null
-}
-
-export interface AdminSourcesResponseDTO {
-  items: AdminSourceDTO[]
-  total: number
-}
-
-export interface AdminSourceCreateDTO {
-  countryCode: IsoCountryCode    // must exist in Country table
-  topicSlug: TopicSlug
-  name: string                   // 1..120 chars
-  feedUrl: string                // valid http(s) URL, unique
-}
-
-export interface AdminSourcePatchDTO {
-  enabled?: boolean              // if true → also resets failCount=0, disabledAt=null
-  name?: string                  // 1..120 chars
-  // feedUrl/countryCode/topicSlug intentionally NOT patchable (delete+recreate)
-}
-
-export interface AdminSourceDeleteResponseDTO {
-  id: number
-  deletedArticles: number
-}
-```
-
-### 3.2 IngestResponseDTO extension (Feature F)
-
-```ts
-export interface IngestResponseDTO {
-  fetched: number
-  inserted: number
-  updated: number
-  failedSources: IngestFailure[]
-  autoDisabled: number           // NEW: sources that crossed the threshold this run
-  durationMs: number
-}
-```
-
-### 3.3 Endpoint contracts
-
-| Method | Path | Auth | Body | Response | Errors |
-|--------|------|------|------|----------|--------|
-| `POST` | `/api/admin/session` | — | `{ token: string }` | `{ ok: true }` + Set-Cookie | 401 |
-| `POST` | `/api/admin/session/logout` | — | — | `{ ok: true }` + clear cookie | — |
-| `GET` | `/api/admin/sources` | cookie | — | `AdminSourcesResponseDTO` | 401, 400 |
-| `POST` | `/api/admin/sources` | cookie | `AdminSourceCreateDTO` | `AdminSourceDTO` (201) | 401, 400, 404, 409 |
-| `PATCH` | `/api/admin/sources/:id` | cookie | `AdminSourcePatchDTO` | `AdminSourceDTO` | 401, 400, 404 |
-| `DELETE` | `/api/admin/sources/:id` | cookie | — | `AdminSourceDeleteResponseDTO` | 401, 404 |
-
-**Validation rules:**
-- `countryCode`: `/^[A-Z]{2}$/` + must exist in `Country`. Else 404.
-- `topicSlug`: must ∈ `{military, economy, politics}`. Else 400.
-- `name`: trimmed length 1..120. Else 400.
-- `feedUrl`: valid `http`/`https` URL, unique (409 `CONFLICT` if dup), max 2000 chars.
-- `enabled` PATCH with `true`: transactional reset of `failCount=0`, `disabledAt=null`.
-
----
-
-## 4. Feature F — Ingestion Pipeline Integration
-
-### 4.1 `sources.ts` repository additions
-
-```ts
-export async function recordSourceSuccess(id: number): Promise<void>
-// SET failCount=0 WHERE id=:id AND failCount > 0 (no-op if already 0)
-
-export async function recordSourceFailure(
-  id: number, threshold: number
-): Promise<{ autoDisabled: boolean }>
-// Atomic increment; if result >= threshold: set enabled=false, disabledAt=now()
-
-export async function listAdminSources(filters: AdminSourcesQueryDTO): Promise<AdminSourcesResponseDTO>
-export async function findAdminSource(id: number): Promise<AdminSourceDTO | null>
-export async function createSource(input: AdminSourceCreateDTO): Promise<AdminSourceDTO>
-export async function updateSource(id: number, patch: AdminSourcePatchDTO): Promise<AdminSourceDTO>
-export async function deleteSource(id: number): Promise<{ deletedArticles: number }>
-// Transactional: count articles, delete source (cascade handles articles), return count
-```
-
-### 4.2 `ingest.ts` changes (pseudocode)
-
-```ts
-const AUTO_DISABLE_THRESHOLD = 5
-
-// Inside per-source try/catch:
-try {
-  const feed = await fetchFeed(source.feedUrl)
-  // ...existing upsert loop...
-  await recordSourceSuccess(source.id)          // NEW
-} catch (err) {
-  try {
-    const { autoDisabled: wasDisabled } =
-      await recordSourceFailure(source.id, AUTO_DISABLE_THRESHOLD)  // NEW
-    if (wasDisabled) autoDisabled += 1
-  } catch { /* DB down — log, continue */ }
-  failedSources.push({ ... })
-}
-
-return { fetched, inserted, updated, failedSources, autoDisabled, durationMs }
-```
-
-**Only feed-level fetch failures bump `failCount`. Per-item upsert failures are silent (content issue, not source health).**
-
----
-
-## 5. Admin Authentication
-
-### 5.1 Decision: Session cookie over shared secret
-
-**Rejected:** Bearer header (doesn't attach to browser navigation), full OAuth (overkill).
-
-**Chosen:** Session cookie where value = `INGEST_SECRET`.
-
-**Cookie spec:**
-- Name: `el_admin`
-- Value: `INGEST_SECRET` verbatim
-- Attributes: `HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`
-- Set by `POST /api/admin/session`; cleared by `POST /api/admin/session/logout`
-
-**Server helper (new export in `server/utils/auth.ts`):**
-
-```ts
-export function requireAdminSession(event: H3Event): void {
-  const cookie = getCookie(event, 'el_admin') ?? ''
-  const expected = useRuntimeConfig(event).ingestSecret as string
-  if (!expected || !safeEqual(cookie, expected)) {
-    throw createError({ statusCode: 401, statusMessage: 'UNAUTHORIZED', data: { ... } })
-  }
-}
-```
-
-**Two paths, one secret:**
-- GH Actions → bearer header → `requireIngestSecret` (unchanged)
-- Browser admin → cookie → `requireAdminSession` (new)
-
-**Hardening:**
-- `SameSite=Strict` blocks cross-site POSTs (CSRF protection)
-- `HttpOnly` blocks JS access to cookie
-- `/api/admin/session` rate limit: 5 failed attempts per IP per 10 min → 429 (in-memory LRU)
-- `/admin/**` route rule: `robots: false`, `X-Robots-Tag: noindex, nofollow`
-
----
-
-## 6. Agent Work Scopes
-
-### 6.1 backend-dev — CREATE
-
-- `server/api/admin/session.post.ts`
-- `server/api/admin/session/logout.post.ts`
-- `server/api/admin/sources.get.ts`
-- `server/api/admin/sources.post.ts`
-- `server/api/admin/sources/[id].patch.ts`
-- `server/api/admin/sources/[id].delete.ts`
-- `server/utils/services/sourceAdmin.ts`
-- `tests/api/admin-sources.spec.ts`
-- `tests/unit/source-admin.spec.ts`
-
-### 6.2 backend-dev — MODIFY
-
-| File | Change |
-|------|--------|
-| `prisma/schema.prisma` | F fields + `createdAt` + `onDelete: Cascade` on Article |
-| `prisma/seed.ts` | G: 10 → 30 countries |
-| `server/utils/auth.ts` | Add `requireAdminSession` |
-| `server/utils/repositories/sources.ts` | Add 7 new exports |
-| `server/utils/services/ingest.ts` | Call bookkeeping; add `autoDisabled` to return |
-| `types/dto.ts` | Admin DTOs + `IngestResponseDTO.autoDisabled` |
-| `nuxt.config.ts` | `/admin/**` + `/api/admin/**` routeRules |
-| `.env.example` | Document `el_admin` cookie + dual use of `INGEST_SECRET` |
-| `tests/api/ingest.spec.ts` | Auto-disable assertions |
-
-### 6.3 frontend-dev — CREATE
-
-- `pages/admin/index.vue`
-- `layouts/admin.vue`
-- `components/admin/AdminTokenGate.vue`
-- `components/admin/SourceTable.vue`
-- `components/admin/SourceRow.vue`
-- `components/admin/SourceFormDialog.vue`
-- `components/admin/ConfirmDeleteDialog.vue`
-- `components/admin/AdminEmptyState.vue`
-- `composables/useAdminAuth.ts`
-- `composables/useAdminSources.ts`
-- `stores/adminSources.ts`
-- `tests/e2e/admin-flow.spec.ts`
-
-### 6.4 frontend-dev — MODIFY
-
-| File | Change |
-|------|--------|
-| `pages/about.vue` | G editorial caveat: state-affiliated sources note |
-
-**Boundary rule:** frontend-dev: no `server/**`, `prisma/**`. backend-dev: no `pages/**`, `components/**`. `types/dto.ts` — backend-dev writes first, commits before frontend-dev starts.
-
----
-
-## 7. Admin UI Flow
-
-### 7.1 `/admin` page sections
-
-1. **Header** (`layouts/admin.vue`): "EarthLetter Admin" + logout + link to `/`
-2. **Filter bar**: country dropdown + topic dropdown + enabled filter (`All | Enabled | Manually disabled | Auto-disabled`)
-3. **"Add source" button** → opens `SourceFormDialog`
-4. **SourceTable** columns: Name, Country, Topic, feedUrl (truncated), Enabled (toggle), Fail count (badge; red ≥ 3), Last failed (relative time), Articles (count), Actions (edit name, delete)
-5. **EmptyState** when filter yields zero results
-
-### 7.2 Toggle semantics
-
-- OFF → ON: PATCH `{ enabled: true }` → server resets `failCount=0`, `disabledAt=null`. Optimistic UI: flip immediately, rollback on error.
-- ON → OFF: PATCH `{ enabled: false }` → `disabledAt` stays null (manual, not auto).
-
-### 7.3 Delete flow
-
-1. Click "Delete" → `ConfirmDeleteDialog` opens
-2. If `articleCount === 0`: "Delete source {name}?"
-3. If `articleCount > 0`: "Delete source {name}? This will also delete {articleCount} archived articles. This cannot be undone."
-4. Confirm → DELETE → toast with `deletedArticles` count → store removes row
-
-### 7.4 AdminTokenGate UX
-
-1. User visits `/admin` with no cookie → `AdminTokenGate` renders (input + submit)
-2. Submit POSTs to `/api/admin/session` → on 200, client navigates to reload
-3. "Log out" button: POST to `/api/admin/session/logout` + reload
-
----
-
-## 8. Feature G — Country Coverage Expansion
-
-### 8.1 Target: 10 → 30 countries, ≥90 sources
-
-Retain all existing 10 countries and 60 sources.
-
-| Region | Added countries |
-|--------|----------------|
-| Asia-Pacific (+5) | AU, NZ, SG, PH, ID |
-| Europe (+5) | IT, ES, NL, PL, UA |
-| Americas (+4) | CA, BR, MX, AR |
-| Middle East (+3) | AE, SA, TR |
-| Africa (+3) | ZA, NG, EG |
-
-All feeds English-language. Each new country: minimum 3 sources (one per topic).
-All unverified URLs ship with `// REVIEW:` comment.
-
-### 8.2 Editorial caveat (pages/about.vue)
-
-Add one sentence:
-> "Some sources are state-affiliated. EarthLetter does not endorse content; we aggregate headlines across perspectives."
-
-### 8.3 Seed strategy
-
-`seed.ts` uses upsert semantics → re-running is idempotent. Existing rows preserved.
-
-Post-seed: manually trigger `/api/ingest` to backfill articles for new sources.
-
----
-
-## 9. Rendering Strategy (delta)
-
-```ts
-routeRules: {
-  '/admin/**': {
-    ssr: true,
-    headers: {
-      'Cache-Control': 'no-store, private',
-      'X-Robots-Tag': 'noindex, nofollow'
-    },
-    robots: false
+// 1단계: contentHtml 제외한 경량 select
+const rows = await prisma.article.findMany({
+  where,
+  select: {
+    id: true, title: true, summary: true, link: true,
+    imageUrl: true, publishedAt: true,
+    // contentHtml은 select하지 않음
+    source: { select: { id: true, name: true, countryCode: true, topicSlug: true } }
   },
-  '/api/admin/**': {
-    cors: false,
-    headers: {
-      'Cache-Control': 'no-store, private',
-      'X-Robots-Tag': 'noindex, nofollow'
-    },
-    robots: false
+  orderBy: { publishedAt: 'desc' },
+  skip, take
+})
+
+// 2단계: PK IN 조회로 hasContent 판별 (50건 기준 ~1ms)
+const ids = rows.map(r => r.id)
+const withContent = await prisma.article.findMany({
+  where: { id: { in: ids }, contentHtml: { not: null } },
+  select: { id: true }
+})
+const hasSet = new Set(withContent.map(r => r.id))
+const items = rows.map(r => toArticleDTO(r, hasSet.has(r.id)))
+```
+
+### 2.6 마이그레이션
+
+```sql
+-- migrations/20260424xxxxxx_article_content_html/migration.sql
+ALTER TABLE "Article" ADD COLUMN "contentHtml" TEXT;
+```
+
+- 기존 행은 NULL → 차기 ingest 실행 시 피드별로 점진적으로 채워짐
+- PostgreSQL은 `TEXT` 컬럼 NULL 추가를 메타데이터만 수정하므로 rewrite 없음 — 온라인 안전
+
+---
+
+## 3. API 계약
+
+### 3.1 `GET /api/articles/[id]` — 신규
+
+**목적**: 단일 기사 상세 조회. SSR 시 `useFetch`가 호출.
+
+**권한**: 공개 (no auth)
+
+**URL Params**:
+- `id: string` — Article PK (sha256(link)), 64자 hex
+
+**Response 200** (`ArticleDetailDTO`):
+```json
+{
+  "id": "5f2a...b3c",
+  "title": "Lorem ipsum",
+  "summary": "dolor sit amet",
+  "link": "https://example.com/news/123",
+  "imageUrl": "https://example.com/og.jpg",
+  "publishedAt": "2026-04-20T08:30:00.000Z",
+  "contentHtml": "<p>...sanitized HTML...</p>",
+  "source": {
+    "id": 7,
+    "name": "Example News",
+    "countryCode": "US",
+    "topicSlug": "politics"
   }
+}
+```
+
+**Error cases**:
+| Status | statusMessage | 조건 |
+|---|---|---|
+| 400 | `BAD_REQUEST` | `id`가 64자 hex 포맷이 아님 |
+| 404 | `NOT_FOUND` | 해당 id의 Article 없음 **또는** `contentHtml` is null |
+
+**Cache-Control**: `public, s-maxage=600, stale-while-revalidate=3600`
+
+### 3.2 `GET /api/articles` — 기존 변경사항
+
+**변경**: 응답 items 각 원소에 `hasContent: boolean` 필드 추가.
+
+**Before** (`ArticleDTO`):
+```ts
+{ id, title, summary, link, imageUrl, publishedAt, source }
+```
+
+**After** (`ArticleDTO`):
+```ts
+{ id, title, summary, link, imageUrl, publishedAt, hasContent, source }
+```
+
+⚠️ **`contentHtml` 본문은 목록 응답에 절대 포함하지 않는다** (§ 2.4).
+
+### 3.3 `GET /api/home` — 영향 범위
+
+`HomeResponseDTO.featured: ArticleDTO[]`도 `hasContent` 필드를 자동으로 받게 된다.
+`findLatestAcrossSources`도 § 2.4에 따라 `contentHtml`을 제외하고 조회해야 한다.
+
+### 3.4 `POST /api/ingest` — 응답 스키마 불변
+
+`IngestResponseDTO`는 변경하지 않는다.
+
+---
+
+## 4. DTO 변경 (`types/dto.ts`)
+
+### 4.1 `ArticleDTO` — 필드 추가
+
+```ts
+export interface ArticleDTO {
+  id: string
+  title: string
+  summary: string | null
+  link: string
+  imageUrl: string | null
+  publishedAt: string
+  hasContent: boolean      // [NEW] true면 /article/:id 내부 라우팅 허용
+  source: ArticleSourceDTO
+}
+```
+
+### 4.2 `ArticleDetailDTO` — 신규
+
+```ts
+/**
+ * Single-article detail. Returned by GET /api/articles/[id].
+ * contentHtml is already sanitized server-side (sanitize-html allow-list).
+ * Always non-null in this DTO; the endpoint 404s when contentHtml IS NULL.
+ */
+export interface ArticleDetailDTO {
+  id: string
+  title: string
+  summary: string | null
+  link: string
+  imageUrl: string | null
+  publishedAt: string
+  contentHtml: string      // non-null by endpoint contract
+  source: ArticleSourceDTO
 }
 ```
 
 ---
 
-## 10. Risks
+## 5. 렌더링 전략
 
-| # | Risk | Mitigation |
-|---|------|-----------|
-| F-1 | Race condition on `failCount` increment (parallel ingest runs) | Prisma `{ increment: 1 }` is atomic at row level; double-disable is idempotent |
-| F-2 | DB-down during ingest makes `recordSourceFailure` throw, aborting the run | Wrap in inner try/catch; log and continue |
-| F-3 | Threshold=5 too tight for rate-limited feeds | Monitor first 2 weeks; admin can re-enable trivially |
-| E-1 | `INGEST_SECRET` leak compromises both ingest and admin | Document rotation procedure in `.env.example` |
-| E-2 | Cookie stores secret directly | `HttpOnly` + `Secure` + `SameSite=Strict`; accept for MVP |
-| E-4 | Rate-limit LRU resets on cold start | Accept for MVP; escalate to Redis if brute-force becomes concern |
-| E-5 | Hard delete loses articles permanently | Confirm dialog; articles re-populate from RSS |
-| G-1 | RSS rot in 60 new feeds | Feature E (admin UI) + Feature F (auto-disable) provide self-healing |
+### 5.1 라우팅 분기 — `components/ArticleCard.vue`
 
-### 10.1 Open questions for human review
+```
+hasContent === true   → <NuxtLink :to="`/article/${article.id}`">   (내부 SSR)
+hasContent === false  → <a :href="article.link" target="_blank">    (원문 새 탭, 기존 동작)
+```
 
-- **Auto-disable threshold (5):** "5 consecutive failures ≈ 5h of outage" — acceptable?
-- **Cookie lifetime (24h):** Tighter (1h) or looser (7d)?
-- **Hard delete vs. soft delete:** Hard delete recommended for MVP.
-- **Admin UI language:** English-only recommended.
+- `<component :is="hasContent ? NuxtLink : 'a'">` 패턴으로 중복 제거
+- 내부 라우팅: `target=_blank` 제거, CTA "본문 보기 →"
+- 외부 라우팅: `target=_blank rel="noopener noreferrer nofollow"` 유지, CTA "Read at source ↗"
+
+### 5.2 상세 페이지 — `pages/article/[id].vue`
+
+**렌더링 모드**: **SSR**. `useFetch` with `server: true`.
+
+**레이아웃 구성**:
+1. 국가/토픽 브레드크럼
+2. 제목, 소스명, publishedAt
+3. OG 이미지 (있으면)
+4. 본문 영역: `<ArticleContent :html="data.contentHtml" />`
+5. "원문 보기 →" CTA (외부 링크)
+6. 저작권 고지: "이 기사는 [Source Name] RSS 피드에서 제공된 것입니다. 원문 저작권은 해당 매체에 있습니다."
+
+**SEO (필수)**:
+```ts
+useSeoMeta({
+  title: `${article.title} — ${article.source.name} | EarthLetter`,
+  description: article.summary ?? undefined,
+  ogTitle: article.title,
+  ogDescription: article.summary ?? undefined,
+  ogImage: article.imageUrl ?? undefined,
+  ogType: 'article',
+  ogUrl: `${siteOrigin}/article/${article.id}`,
+  articlePublishedTime: article.publishedAt,
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${siteOrigin}/article/${article.id}` }]
+})
+```
+
+### 5.3 `components/ArticleContent.vue` — HTML 렌더링 전담
+
+**역할**: `v-html` 사용처를 이 컴포넌트 **한 곳**으로 격리 (보안 리뷰 지점 단일화).
+
+```vue
+<script setup lang="ts">
+defineProps<{ html: string }>()
+</script>
+
+<template>
+  <!-- SECURITY: html은 server/utils/sanitize.ts에서 allow-list 기반 sanitize됨 -->
+  <div class="article-content prose prose-neutral dark:prose-invert" v-html="html" />
+</template>
+```
+
+### 5.4 이미지/미디어 정책
+
+- 본문 내부 `<img>`: sanitize 단계에서 `loading="lazy"`, `referrerpolicy="no-referrer"` 강제 주입
+- 모든 http(s) `<img src>` 허용
 
 ---
 
-## 11. Implementation Sequencing
+## 6. XSS Sanitization 전략
 
-1. **Day 0 (serial, backend-dev):**
-   - `prisma/schema.prisma` migration
-   - `types/dto.ts` admin DTOs + `autoDisabled`
-   - Commit → frontend-dev unblocks
+### 6.1 원칙
 
-2. **Day 1+ (parallel):**
-   - backend-dev: repositories, services, routes, ingest bookkeeping, tests, seed (G)
-   - frontend-dev: admin layout, pages, components, composables, stores, e2e
+1. **서버 사이드 sanitize** — SSR 환경에서 DOMPurify는 DOM 의존으로 부적합
+2. **Ingest 시점에 sanitize하여 DB에 저장** — 응답 경로가 빠름, 저장된 값이 이미 안전
+3. **이중 sanitize 금지**
 
-3. **Convergence:** dev server + migration + seed → E2E: login → add source → force 5 failures → auto-disable → re-enable → delete
+### 6.2 라이브러리 선정
+
+**`sanitize-html`** 선택. 사유:
+- 순수 파서(htmlparser2) 기반, 서버 친화적
+- `DOMPurify`의 `isomorphic-dompurify`는 SSR 시 DOM 구동 비용 발생
+
+```bash
+npm install sanitize-html
+npm install -D @types/sanitize-html
+```
+
+### 6.3 Allow-list 설계 (`server/utils/sanitize.ts`)
+
+```ts
+import sanitizeHtml from 'sanitize-html'
+
+const ALLOWED_TAGS = [
+  'p', 'br', 'hr',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'strong', 'em', 'b', 'i', 'u', 's', 'sub', 'sup',
+  'ul', 'ol', 'li',
+  'a',
+  'blockquote', 'cite', 'q',
+  'code', 'pre',
+  'img', 'figure', 'figcaption',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'span', 'div'
+]
+
+export function sanitizeArticleHtml(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: {
+      a: ['href', 'title'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
+      '*': ['class']
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: { img: ['http', 'https'] },
+    transformTags: {
+      a: (tagName, attribs) => ({
+        tagName: 'a',
+        attribs: { ...attribs, target: '_blank', rel: 'noopener noreferrer nofollow' }
+      }),
+      img: (tagName, attribs) => ({
+        tagName: 'img',
+        attribs: { ...attribs, loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' }
+      })
+    },
+    exclusiveFilter: (frame) =>
+      frame.tag === 'p' && !frame.text.trim() && !frame.mediaChildren.length
+  })
+}
+```
+
+**명시 차단**: `<script>`, `<style>`, `<iframe>`, `<object>`, `<embed>`, `<form>` — allow-list 미포함으로 자동 제거. `on*` 이벤트, `javascript:` URL, `data:` URL 이미지 모두 차단.
+
+### 6.4 저장 크기 제한
+
+- `contentHtml.length > 500_000` (~500KB) 시 `null`로 저장 (잘라낸 HTML은 파싱 깨짐)
+- 경고 로그 출력
+
+### 6.5 테스트 케이스 (`tests/unit/sanitize.spec.ts`)
+
+- `<script>alert(1)</script>` → 제거됨
+- `<img src=x onerror=alert(1)>` → onerror 제거
+- `<a href="javascript:alert(1)">` → href 제거
+- `<iframe src="evil.com">` → 제거
+- `<p onclick="...">` → onclick 제거
+- 정상 `<p>Hello <strong>world</strong></p>` → 변화 없음
+- 정상 `<a href="https://example.com">` → `target=_blank rel=...` 자동 추가
 
 ---
 
-**End of blueprint v1.1.** Any ambiguity — return to architect.
+## 7. 에이전트별 작업 범위
+
+### 7.1 backend-dev 담당
+
+**B1. Prisma 스키마 + 마이그레이션**
+- `Article.contentHtml String? @db.Text` 추가
+- `npx prisma migrate dev --name article_content_html` 실행
+
+**B2. Sanitize 유틸**
+- `sanitize-html` + `@types/sanitize-html` 설치
+- `server/utils/sanitize.ts` 생성 (§ 6.3)
+- `tests/unit/sanitize.spec.ts` 작성 (§ 6.5)
+
+**B3. RSS 파서 확장**
+- `server/utils/rss.ts`:
+  - `ParsedFeedItem.contentHtml: string | null` 추가
+  - `item['content:encoded'] ?? item.content`로 원본 HTML 추출
+  - `sanitizeArticleHtml` 호출
+  - 결과가 빈 문자열이거나 너무 짧으면(<100자) `null` 반환
+
+**B4. Article 리포지토리 확장**
+- `server/utils/repositories/articles.ts`:
+  - `UpsertArticleInput.contentHtml: string | null` 추가
+  - `upsertArticle`의 create/update에 `contentHtml` 포함
+  - `toArticleDTO(row, hasContent: boolean)` 시그니처 확장
+  - `findArticles`, `findLatestAcrossSources`: § 2.5의 "두 단계 쿼리" 패턴 적용
+  - 신규 `findArticleById(id: string): Promise<ArticleDetailDTO | null>` — `contentHtml` null이면 null 반환
+
+**B5. 상세 API 라우트**
+- `server/api/articles/[id].get.ts` 신규
+- id 포맷 검증 `/^[a-f0-9]{64}$/`
+- 404: 행이 없거나 `contentHtml` null
+- `Cache-Control: public, s-maxage=600, stale-while-revalidate=3600`
+
+**B6. Ingest 서비스 연결**
+- `server/utils/services/ingest.ts`: `item.contentHtml`을 `UpsertArticleInput`에 전달
+- 기존 per-item try/catch 유지 — sanitize 실패로 contentHtml이 null이어도 기사는 저장
+
+**B7. DTO 업데이트**
+- `types/dto.ts`: `ArticleDTO.hasContent: boolean` 추가, `ArticleDetailDTO` 신규 export
+
+**B8. 테스트**
+- `tests/unit/ingest-content.spec.ts`:
+  - content:encoded 있는 feed fixture → `contentHtml` 저장 확인
+  - content:encoded 없는 feed → `contentHtml` null 확인
+
+### 7.2 frontend-dev 담당
+
+**F1. ArticleCard 라우팅 분기**
+- `article.hasContent === true` → `<NuxtLink :to="`/article/${article.id}`">`
+- else → 기존 `<a :href=... target=_blank>`
+- `<component :is="...">` 패턴 사용
+
+**F2. 상세 페이지 신규**
+- `pages/article/[id].vue` 생성 (§ 5.2)
+- `useFetch<ArticleDetailDTO>('/api/articles/' + id, { server: true })`
+- 404 시 `throw createError({ statusCode: 404 })`
+- `useSeoMeta` + `useHead` (§ 5.2)
+- `max-w-3xl` + Tailwind Typography (`prose`) 스타일
+
+**F3. ArticleContent 컴포넌트 신규**
+- `components/ArticleContent.vue` 생성 (§ 5.3)
+
+**F4. Tailwind Typography 플러그인**
+- `@tailwindcss/typography` 설치 및 `tailwind.config` 등록
+
+**F5. e2e 테스트**
+- `tests/e2e/article-detail.spec.ts`:
+  - `hasContent=true` 카드 클릭 → `/article/:id` 이동 검증
+  - `hasContent=false` 카드 클릭 → 새 탭 열림 검증
+  - 상세 페이지 SEO 메타 태그 존재 확인
+  - 본문에 `<script>` 태그 없음 확인
+
+---
+
+## 8. 위험 요소 및 주의사항
+
+### 8.1 저작권 / 법적 리스크
+
+| 리스크 | 완화 |
+|---|---|
+| RSS `content:encoded`는 매체가 공개 배포 의도로 내보낸 것 | 정책적으로 **RSS가 주는 그대로**만 저장. 외부 스크래핑 금지. |
+| 매체가 RSS 정책 변경 시 기존 DB 값이 더 풍부해 보이는 문제 | ingest가 upsert로 최신값 덮어씀. `contentHtml`이 null로 후퇴 시 상세 페이지 404 → 외부 링크로 복귀. |
+| DMCA 요청 | Admin에서 Source 삭제 → cascade로 Article 삭제 (기존 Feature E 동작). |
+
+### 8.2 보안 리스크
+
+| 리스크 | 완화 |
+|---|---|
+| XSS via content:encoded | § 6의 allow-list sanitize + 단위 테스트 필수 |
+| Stored XSS (sanitize 우회) | `ArticleContent` 컴포넌트로 v-html 격리 |
+| 외부 이미지로 IP 추적 | `referrerpolicy=no-referrer` 주입 |
+| 거대 HTML로 DB/응답 DoS | § 6.4의 500KB 상한 |
+
+### 8.3 성능 리스크
+
+| 리스크 | 완화 |
+|---|---|
+| 목록 API가 TOAST HTML까지 가져와 느려짐 | § 2.5의 "두 단계 쿼리" — **backend-dev 리뷰 필수 체크리스트** |
+| Sanitize 비용이 ingest 지연 | 배치 처리이므로 허용 가능. 피드당 수백 ms. |
+
+### 8.4 데이터 일관성
+
+- 기존 Article들은 `contentHtml = null` → 즉시는 외부 링크 동작. 점진적으로 재ingest 시 채워짐.
+- 의도된 점진적 전환, 별도 backfill 불필요.
+
+### 8.5 구현 순서 (의존성)
+
+1. **B1** 스키마 + 마이그레이션
+2. **B2** sanitize 유틸 + 테스트 (독립)
+3. **B3, B4, B6** RSS 파서 + 리포지토리 + ingest (한 묶음)
+4. **B7** DTO 업데이트
+5. **B5** 상세 API
+6. **B8** BE 테스트
+7. **F1** ArticleCard 라우팅 분기 (B7 이후)
+8. **F2, F3, F4** 상세 페이지 + 컴포넌트 (B5 이후)
+9. **F5** e2e 테스트
+
+병렬화 포인트: B2는 독립. F1은 B7 완료 직후 가능. F2/F3/F4는 B5 완료 직후.
+
+### 8.6 QA 체크리스트
+
+- [ ] 마이그레이션이 prod-safe (ADD COLUMN NULL, rewrite 없음)
+- [ ] `findArticles`/`findLatestAcrossSources` 응답에 `contentHtml` 본문 **미포함** (페이로드 회귀 검증)
+- [ ] `contentHtml` 있는 기사 → 내부 상세 라우팅 → 본문 렌더
+- [ ] `contentHtml` 없는 기사 → 기존대로 원문 새 탭
+- [ ] sanitize: script/iframe/onerror/javascript: 모두 제거
+- [ ] SEO 메타: og:type=article, og:title, canonical 확인
+- [ ] 404: 없는 id + contentHtml null인 id 모두 404
+- [ ] e2e: 카드 클릭 → 올바른 목적지 (내부 vs 외부)
+- [ ] 성능: 목록 API 응답이 Feature K 이전 대비 10% 이내 변동

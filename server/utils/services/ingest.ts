@@ -60,7 +60,8 @@ export async function runIngestion(): Promise<IngestResponseDTO> {
           summary: item.contentSnippet,
           link,
           imageUrl: item.enclosureUrl,
-          publishedAt: item.publishedAt
+          publishedAt: item.publishedAt,
+          contentHtml: item.contentHtml
         }
 
         try {

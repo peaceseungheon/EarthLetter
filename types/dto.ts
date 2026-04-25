@@ -29,6 +29,25 @@ export interface ArticleDTO {
   link: string // absolute outbound URL
   imageUrl: string | null
   publishedAt: string // ISO-8601 UTC
+  // Feature K: true면 /article/:id 내부 라우팅 허용. BE는 항상 이 값을 채운다
+  // (server/utils/repositories/articles.ts 의 "두 단계 쿼리" 패턴, § 2.5).
+  hasContent: boolean
+  source: ArticleSourceDTO
+}
+
+/**
+ * Single-article detail. Returned by GET /api/articles/[id].
+ * contentHtml is already sanitized server-side (sanitize-html allow-list).
+ * Always non-null in this DTO; the endpoint 404s when contentHtml IS NULL.
+ */
+export interface ArticleDetailDTO {
+  id: string
+  title: string
+  summary: string | null
+  link: string
+  imageUrl: string | null
+  publishedAt: string
+  contentHtml: string // non-null by endpoint contract
   source: ArticleSourceDTO
 }
 

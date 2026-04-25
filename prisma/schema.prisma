@@ -58,6 +58,7 @@ model Article {
   imageUrl    String?
   publishedAt DateTime
   fetchedAt   DateTime @default(now())
+  contentHtml String?  @db.Text
 
   source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
