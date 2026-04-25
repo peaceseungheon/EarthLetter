@@ -55,8 +55,13 @@ onMounted(() => {
         :countries="countries"
         @country-click="goToCountry"
       />
+      <AvailableCountriesStrip
+        :countries="countries"
+        @select="(code) => goToCountry({ code })"
+      />
       <CountrySelector
         :countries="countries"
+        label="Or search by name"
         @select="(code) => goToCountry({ code })"
       />
     </section>

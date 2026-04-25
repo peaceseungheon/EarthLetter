@@ -105,12 +105,16 @@ const shapes = computed<MapShape[]>(() => {
     const country = code ? sourcesByCode.get(code) : undefined
     const clickable = Boolean(country?.hasSources)
     const ci = pickColorIndex(code, out.length)
-    const fill = clickable ? ACTIVE_PALETTE[ci] : MUTED_PALETTE[ci]
+    const fill = clickable
+      ? (ACTIVE_PALETTE[ci] ?? ACTIVE_PALETTE[0]!)
+      : (MUTED_PALETTE[ci] ?? MUTED_PALETTE[0]!)
 
     out.push({ code, name, d, clickable, fill })
   }
   return out
 })
+
+const availableCount = computed(() => shapes.value.filter((s) => s.clickable).length)
 
 const hovered = ref<{ name: string; x: number; y: number } | null>(null)
 
@@ -159,8 +163,8 @@ function onMouseLeave() {
           :class="[
             'transition-colors',
             shape.clickable
-              ? 'cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
-              : 'cursor-default',
+              ? 'path-available cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+              : 'cursor-default opacity-70',
           ]"
           :tabindex="shape.clickable ? 0 : -1"
           :role="shape.clickable ? 'button' : 'presentation'"
@@ -181,6 +185,29 @@ function onMouseLeave() {
       </g>
     </svg>
 
+    <!-- legend -->
+    <div
+      v-if="topo"
+      class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-ink-muted dark:text-ink-dark-muted"
+      aria-hidden="true"
+    >
+      <div class="flex items-center gap-1.5">
+        <span
+          class="inline-block h-3 w-6 rounded-sm"
+          style="background: linear-gradient(90deg, #4e79a7, #f28e2b, #59a14f, #e15759)"
+        />
+        <span>
+          Available
+          <span class="font-semibold text-ink dark:text-ink-dark">({{ availableCount }})</span>
+          — click to read news
+        </span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block h-3 w-6 rounded-sm bg-[#c8dce8] opacity-70 dark:bg-[#c9e3e1]" />
+        <span>No coverage yet</span>
+      </div>
+    </div>
+
     <Teleport to="body">
       <div
         v-if="hovered"
@@ -198,14 +225,30 @@ function onMouseLeave() {
 </template>
 
 <style scoped>
+.path-available {
+  animation: map-beacon 3.5s ease-in-out infinite;
+}
+
+.path-available:hover {
+  filter: brightness(1.18);
+  opacity: 1;
+}
+
+@keyframes map-beacon {
+  0%, 100% { filter: saturate(1) brightness(1); }
+  50%       { filter: saturate(1.25) brightness(1.1); }
+}
+
 @media (pointer: coarse) {
   :deep([role='tooltip']) {
     display: none;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   svg path {
     transition: none !important;
+    animation: none !important;
   }
 }
 </style>
