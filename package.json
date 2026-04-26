@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "prisma migrate deploy && prisma generate && nuxt build",
+    "build": "prisma migrate deploy && prisma generate && nuxt build && prisma db seed",
     "preview": "nuxt preview",
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare && node -e \"const fs=require('node:fs');const path=require('node:path');const src=require.resolve('world-atlas/countries-110m.json');const dest=path.join('assets','geo','countries-110m.json');fs.mkdirSync(path.dirname(dest),{recursive:true});fs.copyFileSync(src,dest);\"",
