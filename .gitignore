@@ -42,3 +42,6 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 .eslintcache
+
+#Oh My Claude Code
+.omc/
