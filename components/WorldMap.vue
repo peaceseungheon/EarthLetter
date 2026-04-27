@@ -18,6 +18,8 @@ import { numericToAlpha2 } from '~/composables/useCountryIdMap'
 
 interface Props {
   countries: CountryDTO[]
+  /** countryCode → spikeRatio (%) for amber heatmap overlay. Optional. */
+  trendingCountries?: Record<string, number>
   /** Viewport width in SVG units; kept responsive via width:100% in CSS. */
   width?: number
   /** Viewport height in SVG units. */
@@ -25,7 +27,8 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {
   width: 960,
-  height: 500
+  height: 500,
+  trendingCountries: () => ({})
 })
 
 const emit = defineEmits<{
@@ -68,6 +71,7 @@ interface MapShape {
   d: string
   clickable: boolean
   fill: string
+  trendingIntensity: number // 0 = not trending; 1 = max (≥500% spike)
 }
 
 const shapes = computed<MapShape[]>(() => {
@@ -109,7 +113,10 @@ const shapes = computed<MapShape[]>(() => {
       ? (ACTIVE_PALETTE[ci] ?? ACTIVE_PALETTE[0]!)
       : (MUTED_PALETTE[ci] ?? MUTED_PALETTE[0]!)
 
-    out.push({ code, name, d, clickable, fill })
+    const trendingIntensity = code
+      ? Math.min((props.trendingCountries[code] ?? 0) / 500, 1)
+      : 0
+    out.push({ code, name, d, clickable, fill, trendingIntensity })
   }
   return out
 })
@@ -154,6 +161,15 @@ function onMouseLeave() {
       class="block h-auto w-full select-none"
     >
       <g>
+        <!-- Amber heatmap overlay for trending countries. pointer-events-none preserves existing click/hover. -->
+        <g class="pointer-events-none" aria-hidden="true">
+          <path
+            v-for="shape in shapes.filter(s => s.trendingIntensity > 0)"
+            :key="`trend-${shape.code}`"
+            :d="shape.d"
+            :style="{ fill: `rgba(251,146,60,${(shape.trendingIntensity * 0.55).toFixed(2)})` }"
+          />
+        </g>
         <path
           v-for="(shape, i) in shapes"
           :key="shape.code ?? `shape-${i}`"

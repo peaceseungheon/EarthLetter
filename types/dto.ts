@@ -81,6 +81,19 @@ export interface TrendsResponseDTO {
   items: TrendDataPointDTO[]
 }
 
+// ---------- Trending ----------
+
+export interface TrendingItemDTO {
+  countryCode: string   // ISO-3166 alpha-2
+  countryName: string   // English name from Country table
+  topicSlug: string     // TopicSlug value
+  todayCount: number    // articles in last 24 h
+  avg7dCount: number    // daily average over prior 7 days (rounded to 2dp)
+  spikeRatio: number    // ((todayCount / avg7dCount) - 1) × 100, rounded to 1dp
+}
+
+export type TrendingResponseDTO = TrendingItemDTO[]
+
 // ---------- Response envelopes ----------
 
 export interface CountriesResponseDTO {

@@ -33,6 +33,12 @@
           Map
         </NuxtLink>
         <NuxtLink
+          to="/trending"
+          class="text-ink-muted hover:text-ink dark:text-ink-dark-muted dark:hover:text-ink-dark"
+        >
+          Trending
+        </NuxtLink>
+        <NuxtLink
           to="/about"
           class="text-ink-muted hover:text-ink dark:text-ink-dark-muted dark:hover:text-ink-dark"
         >

@@ -15,6 +15,7 @@
 | 4 | 2026-04-25 | WorldMap UX — 국가 탐색 UI 고도화 | ✅ 완료 |
 | 5 | 2026-04-25 | 로딩 UI 보강 — 페이지 네비게이션 & 데이터 fetch 피드백 | ✅ 완료 |
 | 6 | 2026-04-25 | 커버리지 확장 + 국가별 트렌드 탭 | ✅ 완료 |
+| 7 | 2026-04-27 | Trending Feed — 24h 급증 탐지 + 홈 위젯 + /trending 페이지 | ✅ 완료 |
 
 ---
 
@@ -148,6 +149,28 @@
 | **국가 개요 스켈레톤** | `CountryOverviewSkeleton.vue` — 3-section placeholder |
 | **Lazy fetch 전환** | `pages/country/[code]/index.vue` — `await Promise.all` → `useFetch({ lazy: true })` 배열로 전환 |
 | **접근성** | 모든 로딩 영역 `role="status"` + `aria-busy="true"` + `aria-live="polite"` |
+
+---
+
+### 7. Trending Feed — 24h 급증 탐지 `2026-04-27`
+
+**목표:** 24시간 기사 급증 국가×토픽을 탐지해 홈 위젯(top 5)과 `/trending` 전용 페이지(WorldMap 히트맵 + top 15 랭킹)로 노출한다.
+
+| 분류 | 내용 |
+|------|------|
+| **신규 API** | `GET /api/trending` — Prisma `$queryRaw` 두 CTE(today/baseline), SWR 1h |
+| **알고리즘** | 최근 24h vs 이전 7일 일평균 비교, `total_7d >= 5` 필터, spikeRatio DESC LIMIT 15 |
+| **DB 변경** | 없음 (기존 Article/Source/Country 테이블 활용) |
+| **신규 DTO** | `TrendingItemDTO`, `TrendingResponseDTO` (`types/dto.ts`) |
+| **신규 리포지토리** | `server/utils/repositories/trending.ts` — `findTrending()` |
+| **신규 Composable** | `composables/useTrending.ts` — lazy useFetch wrapper |
+| **신규 컴포넌트** | `TrendingBadge.vue`, `TrendingWidget.vue`, `TrendingRankingList.vue`, `skeletons/TrendingSkeleton.vue` |
+| **신규 페이지** | `pages/trending.vue` — SSR + SWR 1h |
+| **수정 컴포넌트** | `WorldMap.vue` — optional `trendingCountries` prop + amber 오버레이 레이어 (pointer-events-none) |
+| **수정 페이지** | `pages/index.vue` — TrendingWidget 섹션 삽입 |
+| **수정 네비** | `SiteHeader.vue` — Trending 링크 추가 |
+| **신규 테스트** | `tests/api/trending-spikeratio.spec.ts` — 공식 불변식 4개 |
+| **렌더링** | `/trending`: SSR + SWR 1h |
 
 ---
 

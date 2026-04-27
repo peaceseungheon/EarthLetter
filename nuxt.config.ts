@@ -81,6 +81,12 @@ export default defineNuxtConfig({
         'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=1800'
       }
     },
+    '/trending': {
+      swr: 3600,
+      headers: {
+        'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=7200'
+      }
+    },
     '/about': { prerender: true },
     '/privacy': { prerender: true },
     '/terms': { prerender: true },

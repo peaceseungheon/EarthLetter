@@ -66,6 +66,10 @@ onMounted(() => {
       />
     </section>
 
+    <section class="flex flex-col gap-4">
+      <TrendingWidget />
+    </section>
+
     <section v-if="featured.length > 0 || showSkeleton" class="flex flex-col gap-4">
       <h2 class="text-xl font-semibold text-ink dark:text-ink-dark">
         Latest across the world
