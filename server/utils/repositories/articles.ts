@@ -191,37 +191,45 @@ export interface UpsertArticleResult {
 /**
  * Upsert by primary key (sha256(link)). Returns whether the row existed
  * before the write so the caller can accumulate insert/update counts.
+ *
+ * Single round-trip: the `pre` CTE captures pre-upsert existence, `ups`
+ * does the INSERT … ON CONFLICT DO UPDATE, and the outer SELECT derives
+ * the insert-vs-update flag — all in one query.
  */
 export async function upsertArticle(
   input: UpsertArticleInput
 ): Promise<UpsertArticleResult> {
-  const existing = await prisma.article.findUnique({
-    where: { id: input.id },
-    select: { id: true }
-  })
-
-  await prisma.article.upsert({
-    where: { id: input.id },
-    create: {
-      id: input.id,
-      sourceId: input.sourceId,
-      title: input.title,
-      summary: input.summary ?? null,
-      link: input.link,
-      imageUrl: input.imageUrl ?? null,
-      publishedAt: input.publishedAt,
-      contentHtml: input.contentHtml ?? null
-    },
-    update: {
-      title: input.title,
-      summary: input.summary ?? null,
-      imageUrl: input.imageUrl ?? null,
-      publishedAt: input.publishedAt,
-      contentHtml: input.contentHtml ?? null
-    }
-  })
-
-  return { kind: existing ? 'updated' : 'inserted' }
+  const rows = await prisma.$queryRaw<Array<{ inserted: boolean }>>`
+    WITH pre AS (
+      SELECT id FROM "Article" WHERE id = ${input.id}
+    ),
+    ups AS (
+      INSERT INTO "Article" (
+        "id", "sourceId", "title", "summary", "link",
+        "imageUrl", "publishedAt", "contentHtml"
+      ) VALUES (
+        ${input.id},
+        ${input.sourceId},
+        ${input.title},
+        ${input.summary},
+        ${input.link},
+        ${input.imageUrl},
+        ${input.publishedAt},
+        ${input.contentHtml}
+      )
+      ON CONFLICT ("id") DO UPDATE SET
+        "title"       = EXCLUDED."title",
+        "summary"     = EXCLUDED."summary",
+        "imageUrl"    = EXCLUDED."imageUrl",
+        "publishedAt" = EXCLUDED."publishedAt",
+        "contentHtml" = EXCLUDED."contentHtml"
+      RETURNING "id"
+    )
+    SELECT (pre.id IS NULL)::boolean AS inserted
+    FROM ups
+    LEFT JOIN pre ON true
+  `
+  return { kind: rows[0]?.inserted ? 'inserted' : 'updated' }
 }
 
 /**

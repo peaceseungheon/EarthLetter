@@ -46,30 +46,32 @@ export async function runIngestion(): Promise<IngestResponseDTO> {
       const feed = await fetchFeed(source.feedUrl)
       fetched += 1
 
-      // Per-item upsert — a single bad row shouldn't drop the whole feed.
+      // Per-item upsert — run all items in parallel; settled so a single bad
+      // row never drops the rest. A single bad row self-heals next run.
+      const upsertResults = await Promise.allSettled(
+        feed.items
+          .filter((item) => item.link.trim())
+          .map((item) => {
+            const link = item.link.trim()
+            return upsertArticle({
+              id: sha256(link),
+              sourceId: source.id,
+              title: item.title,
+              summary: item.contentSnippet,
+              link,
+              imageUrl: item.enclosureUrl,
+              publishedAt: item.publishedAt,
+              contentHtml: item.contentHtml
+            })
+          })
+      )
+
       let sourceInserted = 0
       let sourceUpdated = 0
-      for (const item of feed.items) {
-        const link = item.link.trim()
-        if (!link) continue
-
-        const input: UpsertArticleInput = {
-          id: sha256(link),
-          sourceId: source.id,
-          title: item.title,
-          summary: item.contentSnippet,
-          link,
-          imageUrl: item.enclosureUrl,
-          publishedAt: item.publishedAt,
-          contentHtml: item.contentHtml
-        }
-
-        try {
-          const res = await upsertArticle(input)
-          if (res.kind === 'inserted') sourceInserted += 1
+      for (const r of upsertResults) {
+        if (r.status === 'fulfilled') {
+          if (r.value.kind === 'inserted') sourceInserted += 1
           else sourceUpdated += 1
-        } catch {
-          // Ignore single-item DB write failures; they self-heal next run.
         }
       }
 

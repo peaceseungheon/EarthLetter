@@ -341,6 +341,12 @@ const SOURCES: SourceSeed[] = [
   },
   {
     countryCode: 'KR',
+    topicSlug: 'economy',
+    name: 'The Korea Times — Business',
+    feedUrl: 'https://feed.koreatimes.co.kr/k/business.xml'
+  },
+  {
+    countryCode: 'KR',
     topicSlug: 'politics',
     name: 'Yonhap News — Politics',
     feedUrl: 'https://en.yna.co.kr/RSS/politics.xml'
@@ -935,6 +941,7 @@ const SOURCES: SourceSeed[] = [
   { countryCode: 'IN', topicSlug: 'health', name: 'Times of India — Health',           feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/3908999.cms' }, // REVIEW
   { countryCode: 'AU', topicSlug: 'health', name: 'The Conversation — Health',         feedUrl: 'https://theconversation.com/health/articles.atom' },
   { countryCode: 'DE', topicSlug: 'health', name: 'DW Health',                         feedUrl: 'https://rss.dw.com/rdf/rss-en-health' }, // REVIEW
+  { countryCode: 'KR', topicSlug: 'health', name: 'Korea Biomedical Review',           feedUrl: 'https://www.koreabiomed.com/rss/allArticle.xml' },
 
   // ---------- culture ----------
   { countryCode: 'US', topicSlug: 'culture', name: 'NPR Arts & Life',                 feedUrl: 'https://feeds.npr.org/1008/rss.xml' },
@@ -942,6 +949,7 @@ const SOURCES: SourceSeed[] = [
   { countryCode: 'FR', topicSlug: 'culture', name: 'France 24 — Culture',              feedUrl: 'https://www.france24.com/en/culture/rss' },
   { countryCode: 'JP', topicSlug: 'culture', name: 'Japan Today — Culture',            feedUrl: 'https://japantoday.com/category/arts-culture/feed' }, // REVIEW
   { countryCode: 'KR', topicSlug: 'culture', name: 'Korea JoongAng Daily — Culture',  feedUrl: 'https://koreajoongangdaily.joins.com/rss' }, // REVIEW
+  { countryCode: 'KR', topicSlug: 'culture', name: 'Yonhap News — Culture/K-pop',    feedUrl: 'https://en.yna.co.kr/RSS/culture.xml' },
 
   // ---------- sports ----------
   { countryCode: 'US', topicSlug: 'sports', name: 'ESPN Headlines',                   feedUrl: 'https://www.espn.com/espn/rss/news' },
@@ -950,6 +958,8 @@ const SOURCES: SourceSeed[] = [
   { countryCode: 'IN', topicSlug: 'sports', name: 'Times of India — Sports',           feedUrl: 'https://timesofindia.indiatimes.com/rssfeeds/4719161.cms' }, // REVIEW
   { countryCode: 'JP', topicSlug: 'sports', name: 'Japan Times — Sports',              feedUrl: 'https://www.japantimes.co.jp/tag/sports/feed/' },
   { countryCode: 'KR', topicSlug: 'sports', name: 'Korea Herald — Sports',             feedUrl: 'https://koreaherald.com/common/rss_xml.php?ct=020200000000' }, // REVIEW
+  { countryCode: 'KR', topicSlug: 'sports', name: 'Yonhap News — Sports',              feedUrl: 'https://en.yna.co.kr/RSS/sports.xml' },
+  { countryCode: 'KR', topicSlug: 'sports', name: 'The Korea Times — Sports',          feedUrl: 'https://feed.koreatimes.co.kr/k/sports.xml' },
   { countryCode: 'DE', topicSlug: 'sports', name: 'DW Sports',                         feedUrl: 'https://rss.dw.com/rdf/rss-en-sports' }, // REVIEW
   { countryCode: 'FR', topicSlug: 'sports', name: 'France 24 — Sports',                feedUrl: 'https://www.france24.com/en/sport/rss' },
 
