@@ -12,10 +12,7 @@
 import type { IngestFailure, IngestResponseDTO } from '~/types/dto'
 import { sha256 } from '../hash'
 import { fetchFeed, parallel } from '../rss'
-import {
-  upsertArticle,
-  type UpsertArticleInput
-} from '../repositories/articles'
+import { upsertArticle } from '../repositories/articles'
 import {
   listEnabledSources,
   recordSourceFailure,
