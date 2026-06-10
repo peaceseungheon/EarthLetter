@@ -16,10 +16,11 @@ useSeoMeta({
 </script>
 
 <template>
-  <!-- ColorScheme injects the @nuxt/color-mode class onto <html> to avoid FOUC. -->
-  <ColorScheme placeholder="...">
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-  </ColorScheme>
+  <!-- FOUC is prevented by @nuxtjs/color-mode's inlined <html> class script.
+       Do NOT wrap the app in <ColorScheme> — with preference 'system' the mode
+       is unknown on the server, so ColorScheme SSRs only its placeholder and
+       every page ships as an empty shell (no SEO, no SSR'd articles). -->
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>
