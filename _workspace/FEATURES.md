@@ -16,6 +16,7 @@
 | 5 | 2026-04-25 | 로딩 UI 보강 — 페이지 네비게이션 & 데이터 fetch 피드백 | ✅ 완료 |
 | 6 | 2026-04-25 | 커버리지 확장 + 국가별 트렌드 탭 | ✅ 완료 |
 | 7 | 2026-04-27 | Trending Feed — 24h 급증 탐지 + 홈 위젯 + /trending 페이지 | ✅ 완료 |
+| 8 | 2026-06-10 | 3D 지구본 WorldMap + 국가 호버 기사 프리뷰 | ✅ 완료 |
 
 ---
 
@@ -171,6 +172,30 @@
 | **수정 네비** | `SiteHeader.vue` — Trending 링크 추가 |
 | **신규 테스트** | `tests/api/trending-spikeratio.spec.ts` — 공식 불변식 4개 |
 | **렌더링** | `/trending`: SSR + SWR 1h |
+
+---
+
+### 8. 3D 지구본 WorldMap + 국가 호버 기사 프리뷰 `2026-06-10`
+
+**목표:** 평면 SVG 지도를 드래그로 회전 가능한 orthographic 지구본으로 전환하고, 국가 호버 시 최신 기사 3건 프리뷰 팝오버를 제공한다.
+
+| 분류 | 내용 |
+|------|------|
+| **렌더링 방식** | d3-geo `geoOrthographic` + SVG 유지 (신규 의존성 0, DOM path 기반 접근성/히트테스트 확보) |
+| **드래그 회전** | Pointer Events + rAF 코얼레싱 + 경량 관성(×0.95 감쇠), φ ±80° 클램프, `setPointerCapture` 3px 지연 시작 |
+| **자동 회전** | 3°/s, 4중 정지 조건 (reduced-motion / 인터랙션+5s 유예 / IntersectionObserver / visibilitychange) |
+| **신규 API** | `GET /api/countries/[code]/preview?limit=1~5` — 전 토픽 통합 최신 기사, Cache-Control s-maxage=300 + swr=900, 페이로드 < 1KB |
+| **신규 DTO** | `CountryPreviewArticleDTO`, `CountryPreviewResponseDTO` (`types/dto.ts`) |
+| **신규 리포지토리** | `findRecentByCountry()` (articles.ts), `findCountryByCode()` (countries.ts) — 스키마 변경 없음 |
+| **신규 Composables** | `useGlobeProjection`, `useGlobeRotation`, `useCountryPreview` (250ms 디바운스 + TTL 5분 캐시 + abort + in-flight dedupe), `useMapMode` |
+| **신규 컴포넌트** | `GlobeMap.vue` (WorldMap과 props/emits 계약 동일), `CountryPreviewPopover.vue` (centroid 앵커 + 경계 플립), `MapModeToggle.vue` (2D/3D 토글, localStorage) |
+| **수정 페이지** | `pages/index.vue`, `pages/trending.vue` — 모드 분기 + 토글, trending은 1위 국가 정면 초기 회전(`focusCountryCode`) |
+| **모바일** | 2-탭 모델 (1탭 프리뷰 → 2탭/View all 이동), `pointer: coarse` 판별 |
+| **접근성** | 키보드 = 호버 동급 (Tab → 프리뷰, Enter 이동, Escape 닫기, 팝오버 focusin/focusout), `role="status"` + `aria-live` |
+| **SSR** | 결정적 초기 회전으로 첫 프레임 SSR 포함 (hydration mismatch 0), 인터랙션은 onMounted 이후 |
+| **2D 폴백** | `WorldMap.vue` 무수정 보존, 토글로 전환 가능 |
+| **신규 테스트** | `tests/unit/country-preview.spec.ts` (12), `tests/unit/globe-rotation.spec.ts` (8), `tests/api/country-preview-contract.spec.ts` (10) — 전체 101 테스트 통과 |
+| **QA** | Critical/High 0건, Medium 2건(rAF 누수, 키보드 접근성) 수정 완료. Low 5건 백로그 (`_workspace/03_qa_report.md` § 3) |
 
 ---
 

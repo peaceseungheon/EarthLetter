@@ -15,6 +15,10 @@ useSiteSeo({
 const router = useRouter()
 const countriesStore = useCountriesStore()
 
+// 2D/3D map mode — SSR always renders the globe; localStorage preference is
+// applied after mount (architecture § 6.6).
+const { mode: mapMode, setMode: setMapMode } = useMapMode()
+
 // SSR: populate the store so WorldMap has data on first paint.
 await useAsyncData('countries-hydrate', async () => {
   await countriesStore.fetchIfStale()
@@ -51,10 +55,23 @@ onMounted(() => {
     </section>
 
     <section class="flex flex-col gap-4">
-      <WorldMap
-        :countries="countries"
-        @country-click="goToCountry"
-      />
+      <div class="relative">
+        <MapModeToggle
+          :mode="mapMode"
+          class="absolute right-3 top-3 z-10"
+          @update:mode="setMapMode"
+        />
+        <GlobeMap
+          v-if="mapMode === 'globe'"
+          :countries="countries"
+          @country-click="goToCountry"
+        />
+        <WorldMap
+          v-else
+          :countries="countries"
+          @country-click="goToCountry"
+        />
+      </div>
       <AvailableCountriesStrip
         :countries="countries"
         @select="(code) => goToCountry({ code })"

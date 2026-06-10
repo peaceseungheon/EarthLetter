@@ -34,6 +34,21 @@ export async function listCountriesWithHasSources(): Promise<CountryDTO[]> {
   })
 }
 
+/**
+ * Single country lookup by ISO alpha-2 code. Returns null when the
+ * country is not registered. Narrow select — preview handler only
+ * needs code + nameEn.
+ */
+export async function findCountryByCode(
+  code: string
+): Promise<{ code: string, nameEn: string } | null> {
+  const row = await prisma.country.findUnique({
+    where: { code },
+    select: { code: true, nameEn: true }
+  })
+  return row
+}
+
 export async function countryExists(code: string): Promise<boolean> {
   const row = await prisma.country.findUnique({
     where: { code },

@@ -12,7 +12,12 @@
 //      than a denormalized column, so there's a single source of truth.
 
 import type { Prisma } from '@prisma/client'
-import type { ArticleDTO, ArticleDetailDTO, TopicSlug } from '~/types/dto'
+import type {
+  ArticleDTO,
+  ArticleDetailDTO,
+  CountryPreviewArticleDTO,
+  TopicSlug
+} from '~/types/dto'
 import { prisma } from '../prisma'
 
 interface FindArticlesParams {
@@ -128,6 +133,39 @@ export async function findLatestAcrossSources(
 
   const hasSet = await resolveHasContentSet(rows.map((r) => r.id))
   return rows.map((r) => toArticleDTO(r, hasSet.has(r.id)))
+}
+
+/**
+ * Latest-N for one country across all topics (hover preview popover).
+ * Lean select — no summary/link/imageUrl, never contentHtml (invariant 1).
+ * `hasContent` reuses the same two-step PK-IN pattern as the list queries.
+ */
+export async function findRecentByCountry(
+  country: string,
+  limit: number
+): Promise<CountryPreviewArticleDTO[]> {
+  const rows = await prisma.article.findMany({
+    where: { source: { countryCode: country, enabled: true } },
+    select: {
+      id: true,
+      title: true,
+      publishedAt: true,
+      source: { select: { name: true, topicSlug: true } }
+    },
+    orderBy: { publishedAt: 'desc' },
+    take: limit
+  })
+
+  const hasSet = await resolveHasContentSet(rows.map((r) => r.id))
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    topicSlug: r.source.topicSlug as TopicSlug,
+    sourceName: r.source.name,
+    publishedAt: r.publishedAt.toISOString(),
+    hasContent: hasSet.has(r.id)
+  }))
 }
 
 /**

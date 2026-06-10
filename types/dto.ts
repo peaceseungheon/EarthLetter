@@ -94,6 +94,24 @@ export interface TrendingItemDTO {
 
 export type TrendingResponseDTO = TrendingItemDTO[]
 
+// ---------- Country hover preview (Iteration 8) ----------
+
+/** 팝오버 1행. ArticleDTO의 경량 부분집합 — link/summary/imageUrl 미포함. */
+export interface CountryPreviewArticleDTO {
+  id: string // sha256(link); hasContent=true면 /article/:id 라우팅에 사용
+  title: string
+  topicSlug: TopicSlug
+  sourceName: string
+  publishedAt: string // ISO-8601 UTC
+  hasContent: boolean // true → 내부 /article/:id, false → 프리뷰에서 링크 미제공(국가 페이지로 유도)
+}
+
+export interface CountryPreviewResponseDTO {
+  countryCode: IsoCountryCode
+  countryName: string // Country.nameEn
+  items: CountryPreviewArticleDTO[] // 최대 limit건, 최신순. 0건 가능
+}
+
 // ---------- Response envelopes ----------
 
 export interface CountriesResponseDTO {

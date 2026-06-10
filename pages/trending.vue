@@ -11,6 +11,10 @@ useSiteSeo({
 const router = useRouter()
 const countriesStore = useCountriesStore()
 
+// 2D/3D map mode — SSR always renders the globe; localStorage preference is
+// applied after mount (architecture § 6.6).
+const { mode: mapMode, setMode: setMapMode } = useMapMode()
+
 await useAsyncData('countries-hydrate-trending', async () => {
   await countriesStore.fetchIfStale()
   return true
@@ -26,6 +30,11 @@ const trendingCountries = computed<Record<string, number>>(() =>
 )
 
 const showSkeleton = computed(() => pending.value && items.value.length === 0)
+
+// Face the #1 trending country on the globe (architecture § 2-D8, § 6.7).
+// GlobeMap derives the rotation from this code deterministically in setup
+// (SSR-safe) and only follows later arrivals while the globe is untouched.
+const focusCountryCode = computed(() => items.value[0]?.countryCode ?? null)
 
 function goToCountry(payload: { code: string }) {
   router.push(`/country/${payload.code}`)
@@ -45,11 +54,26 @@ function goToCountry(payload: { code: string }) {
     </section>
 
     <section class="flex flex-col gap-4">
-      <WorldMap
-        :countries="countries"
-        :trending-countries="trendingCountries"
-        @country-click="goToCountry"
-      />
+      <div class="relative">
+        <MapModeToggle
+          :mode="mapMode"
+          class="absolute right-3 top-3 z-10"
+          @update:mode="setMapMode"
+        />
+        <GlobeMap
+          v-if="mapMode === 'globe'"
+          :countries="countries"
+          :trending-countries="trendingCountries"
+          :focus-country-code="focusCountryCode"
+          @country-click="goToCountry"
+        />
+        <WorldMap
+          v-else
+          :countries="countries"
+          :trending-countries="trendingCountries"
+          @country-click="goToCountry"
+        />
+      </div>
     </section>
 
     <section class="flex flex-col gap-4">
