@@ -19,6 +19,11 @@ const countriesStore = useCountriesStore()
 // applied after mount (architecture § 6.6).
 const { mode: mapMode, setMode: setMapMode } = useMapMode()
 
+// Start the featured fetch before awaiting countries: non-lazy useFetch
+// fires immediately, so both requests run in parallel during SSR
+// (architecture P1-F3).
+const { data: homeData, pending: featuredPending } = useHomeFeatured()
+
 // SSR: populate the store so WorldMap has data on first paint.
 await useAsyncData('countries-hydrate', async () => {
   await countriesStore.fetchIfStale()
@@ -26,8 +31,6 @@ await useAsyncData('countries-hydrate', async () => {
 })
 
 const countries = computed(() => countriesStore.items)
-
-const { data: homeData, pending: featuredPending } = useHomeFeatured()
 const featured = computed(() => homeData.value?.featured ?? [])
 const showSkeleton = computed(() => featuredPending.value && featured.value.length === 0)
 

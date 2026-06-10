@@ -68,24 +68,19 @@ export const useArticlesStore = defineStore('articles', {
         }
         if (params.pageSize) query.pageSize = params.pageSize
 
-        const { data, error } = await useFetch<ArticlesResponseDTO>(
-          '/api/articles',
-          {
-            query,
-            key: `articles:${key}`
-          }
-        )
-        if (error.value) throw error.value
-        const res = data.value
-        if (res) {
-          this.pages[key] = {
-            items: res.items,
-            total: res.total,
-            totalPages: res.totalPages,
-            page: res.page,
-            pageSize: res.pageSize,
-            fetchedAt: Date.now()
-          }
+        // $fetch (not useFetch): actions run outside the setup context, so
+        // useFetch here loses the Nuxt instance. SSR payload dedup is handled
+        // by the useAsyncData wrapper in composables/useArticles.ts.
+        const res = await $fetch<ArticlesResponseDTO>('/api/articles', {
+          query
+        })
+        this.pages[key] = {
+          items: res.items,
+          total: res.total,
+          totalPages: res.totalPages,
+          page: res.page,
+          pageSize: res.pageSize,
+          fetchedAt: Date.now()
         }
       } catch (e: unknown) {
         const structured = (e as { data?: { message?: string } }).data?.message

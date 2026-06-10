@@ -48,12 +48,11 @@ export const useCountriesStore = defineStore('countries', {
       this.loading = true
       this.error = null
       try {
-        const { data, error } = await useFetch<CountriesResponseDTO>(
-          '/api/countries',
-          { key: 'countries-all' }
-        )
-        if (error.value) throw error.value
-        this.items = data.value?.items ?? []
+        // $fetch (not useFetch): actions run outside the setup context.
+        // SSR payload dedup is handled by the page-level useAsyncData
+        // wrappers around fetchIfStale().
+        const res = await $fetch<CountriesResponseDTO>('/api/countries')
+        this.items = res?.items ?? []
         this.lastFetched = Date.now()
       } catch (e: unknown) {
         const structured = (e as { data?: { message?: string } }).data?.message

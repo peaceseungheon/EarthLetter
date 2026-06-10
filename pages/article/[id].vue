@@ -30,12 +30,18 @@ if (error.value || !article.value) {
 const detail = computed(() => article.value as ArticleDetailDTO)
 
 // Populate countries store (best-effort) so the breadcrumb can show the
-// country name. The store has built-in staleness handling.
+// country name. Non-blocking by design: `countryName` falls back to the raw
+// country code, so this load must not delay SSR or client navigation —
+// only the article detail fetch above blocks render (architecture P1-F3).
 const countriesStore = useCountriesStore()
-await useAsyncData(`article-country-meta-${id.value}`, async () => {
-  await countriesStore.fetchIfStale()
-  return true
-})
+useAsyncData(
+  `article-country-meta-${id.value}`,
+  async () => {
+    await countriesStore.fetchIfStale()
+    return true
+  },
+  { server: false, lazy: true }
+)
 
 const countryCode = computed(() =>
   detail.value.source.countryCode.toUpperCase()
