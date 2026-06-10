@@ -17,6 +17,7 @@
 | 6 | 2026-04-25 | 커버리지 확장 + 국가별 트렌드 탭 | ✅ 완료 |
 | 7 | 2026-04-27 | Trending Feed — 24h 급증 탐지 + 홈 위젯 + /trending 페이지 | ✅ 완료 |
 | 8 | 2026-06-10 | 3D 지구본 WorldMap + 국가 호버 기사 프리뷰 | ✅ 완료 |
+| 9 | 2026-06-10 | 기사 조회 성능 개선 — DB 왕복 축소 + SSR 워터폴 제거 | ✅ 완료 |
 
 ---
 
@@ -196,6 +197,26 @@
 | **2D 폴백** | `WorldMap.vue` 무수정 보존, 토글로 전환 가능 |
 | **신규 테스트** | `tests/unit/country-preview.spec.ts` (12), `tests/unit/globe-rotation.spec.ts` (8), `tests/api/country-preview-contract.spec.ts` (10) — 전체 101 테스트 통과 |
 | **QA** | Critical/High 0건, Medium 2건(rAF 누수, 키보드 접근성) 수정 완료. Low 5건 백로그 (`_workspace/03_qa_report.md` § 3) |
+
+---
+
+### 9. 기사 조회 성능 개선 — DB 왕복 축소 + SSR 워터폴 제거 `2026-06-10`
+
+**목표:** "기사 조회가 느리다" 보고에 대해 조회 경로의 순차 DB 왕복과 프론트 SSR 직렬 패칭을 제거한다. 진단 결과 인덱스는 충분 — 병목은 왕복 횟수와 워터폴 (DB 마이그레이션 없음).
+
+| 분류 | 내용 |
+|------|------|
+| **백엔드 P0** | `findArticles` 단일 `$queryRaw` 쿼리화 — `hasContent`를 `(contentHtml IS NOT NULL)` 인라인 계산, `COUNT(*) OVER()::int`로 total 동봉 (page>1 & 0행 시 count 폴백). `/api/articles` 직렬 3단계 4쿼리 → 병렬 1단계 2쿼리 |
+| **백엔드 P0** | `findLatestAcrossSources`(홈) / `findRecentByCountry`(프리뷰) 동일 패턴 — `/api/home` 2→1쿼리, `/api/countries/:code/preview` 3→2쿼리(병렬). `resolveHasContentSet` 2차 PK-IN 쿼리 삭제 |
+| **백엔드 병렬화** | `articles.get.ts` / `preview.get.ts` — 존재성 체크(404 구분)와 본 쿼리를 `Promise.all` 병렬 실행, 404 계약 유지 |
+| **버그 수정** | `trending.ts` / `trends.ts` raw SQL의 snake_case 식별자 → 실제 컬럼명(따옴표 camelCase) 전면 교체 — PG 소문자 폴딩으로 `/api/trending`·`/api/countries/:code/trends`가 실 DB에서 500이던 결함 해소. trending 양쪽 CTE에 `s."enabled"` 필터 추가 |
+| **프론트 P1** | `stores/articles.ts`·`stores/countries.ts` action 내 `useFetch` → `$fetch` (setup 컨텍스트 상실/중복 패칭 해소), FRESH_MS 캐시 유지 |
+| **프론트 P1** | `useArticles.ts` watch 수동 배선 → `useAsyncData` 전환, `[topic].vue` countries ∥ articles `Promise.all` — SSR = max(두 패칭), 기사 목록 SSR HTML 포함 보장 (SEO) |
+| **프론트 P1** | `index.vue` featured 선호출 병렬화, `article/[id].vue` countries `{server:false, lazy:true}` 논블로킹 (breadcrumb 폴백 활용) |
+| **API 계약** | 전 엔드포인트 응답 shape 불변 (`types/dto.ts` 무수정), 목록에서 `contentHtml` 본문 비선택 불변식 유지 |
+| **DB 변경** | 없음 (인덱스 충분 판정 — `Source(countryCode,topicSlug)`, `Article(sourceId,publishedAt)`, `Article(publishedAt)`) |
+| **신규 테스트** | `tests/api/articles-repository.spec.ts` (6) — SQL 바인딩/DTO shape/hasContent/폴백 검증. `country-preview-contract.spec.ts` 갱신 (10). 전체 107 테스트 통과 |
+| **QA** | Critical/Major 0건 → PASS. Minor 2건 백로그: 스토어 에러 메시지 추출 계층(`e.data.data.message`), trends 쿼리 `enabled` 필터 일관성. 실 DB 스모크 7항목(trending 200, SSR HTML 채증 등)은 배포 환경 검증 권장 (`_workspace/03_qa_report.md` §5) |
 
 ---
 

@@ -1,125 +1,152 @@
-# 이터레이션 8 QA 리포트 — 3D 지구본 + 호버 프리뷰
+# 03_qa_report — 기사 조회 성능 개선 이터레이션 QA 검증
 
-작성: qa agent / 2026-06-10
-입력: `_workspace/00_architecture.md`(§ 5 계약, § 10 체크리스트), `01_frontend_done.md`, `02_backend_done.md`
-
-## 결론 요약
-
-**qa:done — Critical 0건, High 0건, Medium 2건, Low 6건.**
-경계면(API ↔ 프론트) 불일치 **0건**. 전체 테스트 101건 통과(신규 30건 포함), typecheck/lint 통과(테스트 코드 자체의 초기 lint/type 오류는 QA가 수정 완료).
+> 작성: qa / 2026-06-10
+> 기준: `_workspace/00_architecture.md` §6 검증 기준, `01_frontend_done.md`, `02_backend_done.md`
+> 검증 방식: 코드 정독(경계면 교차 비교) + 자동 검증(build/vitest/lint/typecheck) + 부분 런타임 스모크
+> **전체 판정: PASS (조건부)** — Critical 0건, Major 0건, Minor 4건. 실 DB 스모크는 로컬 DB 부재로 미수행 → 스테이징/Vercel Preview에서 §5 잔여 항목 수행 필요.
 
 ---
 
-## 1. 검증 항목 체크리스트
+## 1. 검증 항목별 결과 요약
 
-| # | 항목 | 결과 | 비고 |
-|---|------|------|------|
-| 1 | 경계면 교차 비교 (DTO ↔ select/매핑 ↔ 프론트 소비) | **통과** | § 2 상세 |
-| 2 | publishedAt Date → ISO 직렬화 | **통과** | `articles.ts:166` `.toISOString()` + 단위 테스트로 고정 |
-| 3 | 400/404/200-빈배열 분기 | **통과(정적+단위)** | `preview.get.ts:32-52`. 빈배열은 404 아님(54행 → 200) |
-| 4 | limit 1~5 검증 (소수/0/6+/비숫자/중복 파라미터) | **통과(단위)** | `parseLimit` 미러 테스트. `?limit=1&limit=2`(배열)도 400 확인 |
-| 5 | 대소문자 처리 (`kr` → `KR`) | **통과** | `preview.get.ts:31` toUpperCase 후 정규식 |
-| 6 | Cache-Control 헤더 | **통과(정적)** | 200 경로에서만 `public, s-maxage=300, swr=900` 설정(56행). 에러 응답엔 미설정 — 올바름 |
-| 7 | 단위 테스트 작성+실행 | **통과** | 신규 3파일 30테스트, § 4 |
-| 8 | SSR hydration 위험 | **통과(정적)** | 초기 회전 상수 `[0,-15,0]`, focus 회전은 setup에서 양측 동일 prop으로 결정적. `useMapMode`는 SSR 'globe' 고정 + onMounted 스왑 |
-| 9 | 메모리 누수 (rAF/리스너/옵저버) | **부분 실패** | `useGlobeRotation` onUnmounted 정리는 완전. 단 GlobeMap `closeTimer` 미정리 → BUG-1 (Medium) |
-| 10 | 드래그 중 호버 차단 | **통과(정적)** | `onCountryEnter`가 `isDragging` 체크 + `watch(isDragging)`이 팝오버 닫음 + pointer capture가 enter 이벤트 자체 차단 |
-| 11 | abort 처리 | **통과(단위)** | close() abort, 국가 전환 시 이전 fetch abort, abort된 응답 미표면화 모두 테스트로 검증 |
-| 12 | WorldMap.vue 무수정 | **통과** | `git status`에 WorldMap.vue 없음 (마지막 변경 커밋 5577c13 이전) |
-| 13 | 회귀: pnpm test | **통과** | 14파일 101테스트 all pass |
-| 14 | 회귀: pnpm typecheck | **통과** | exit 0 (QA 테스트 코드의 `vi.spyOn` 타입 오류 1건은 QA가 자체 수정) |
-| 15 | 회귀: pnpm lint | **통과** | 0 errors. 잔여 warning 1건은 기존 `ArticleContent.vue` vue/no-v-html (기존재) |
-| 16 | 접근성 정적 체크 | **부분 실패** | aria-describedby ✓, role=status+aria-live ✓, aria-pressed ✓, tabindex ✓, Escape는 svg 내부에서만 동작 → BUG-2 (Medium) |
-| 17 | 브라우저 실측 (드래그 프레임 타임, 백그라운드 CPU 0%, 실 curl, 페이로드 실측) | **미검증** | dev 서버 기동에 DATABASE_URL 필요(.env 부재). 지시에 따라 DB/.env 미생성. § 10 수동 체크리스트로 이관 |
-| 18 | 팝오버 경계 플립, 모바일 2-탭, reduced-motion 동작 | **미검증(브라우저 필요)** | 코드 경로는 정적 확인 완료 — 구현 존재함 |
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| A1 | raw SQL alias ↔ row 타입 ↔ DTO 필드명·타입 일치 | **통과** | §2.1 |
+| A2 | raw SQL 컬럼명 ↔ migration.sql 실제 컬럼 전수 대조 (trending/trends 포함) | **통과** | §2.2 |
+| A3 | `COUNT(*) OVER()` total 폴백 + totalPages 계산 | **통과** | §2.3 |
+| A4 | 404 계약 (미등록 국가 / malformed id) — Promise.all 이후에도 404 선판정 | **통과** | §2.4 |
+| A5 | 프론트 `$fetch` 전환부 (쿼리 구성·에러 핸들링·FRESH_MS 캐시) | **통과** (Minor-1) | §2.5 |
+| A6 | `useAsyncData` 키/watch 배선/SSR 페이로드 직렬화 | **통과** (Nuxt 3.21.2 소스 레벨 확인) | §2.6 |
+| A7 | SQL 인젝션 (태그드 템플릿 바인딩) | **통과** | §2.7 |
+| B1 | 빌드 | **통과** (`npx nuxt build` exit 0) | §3 |
+| B2 | `pnpm vitest run` | **통과** (15 파일 / 107 테스트 전부 passed) | §3 |
+| B3 | `pnpm lint` | **통과** (0 errors; 기존 경고 1건) | §3 |
+| B4 | `pnpm typecheck` (vue-tsc) | **통과** (exit 0) | §3 |
+| C1 | 400 계약 런타임 채증 (articles country/topic, preview code/limit) | **통과** | §4 |
+| C2 | `/api/trending`·`/api/home`·`/api/articles` 200 + shape, SSR HTML, hasContent 실값 | **미검증 (스킵)** — 로컬 DB 부재 | §4, §5 |
 
-## 2. 경계면 교차 비교 — 불일치 0건
+---
 
-3중 대조: 계약(§ 5.2) ↔ `types/dto.ts:100-113` ↔ `articles.ts:161-168`(매핑) ↔ `CountryPreviewPopover.vue`(소비).
+## 2. A. 경계면 교차 비교 상세
 
-| 필드 | DTO | 백엔드 실제 생산 | 프론트 소비 | 판정 |
-|------|-----|------|------|------|
-| `countryCode` | IsoCountryCode | `country.code` (`preview.get.ts:59`) | `previewState.code` 기반 라우팅 | 일치 |
-| `countryName` | string | `country.nameEn` (60행) | `preview?.countryName ?? countryName` (nullable 안전) | 일치 |
-| `items[].id` | string | row.id | `:key`, `/article/${id}` | 일치 |
-| `items[].title` | string | row.title | 표시 | 일치 |
-| `items[].topicSlug` | TopicSlug | `r.source.topicSlug as TopicSlug` | `TOPIC_META[slug]?.labelEn ?? slug` (미지 슬러그 안전) | 일치 |
-| `items[].sourceName` | string | `r.source.name` → 평탄화 | 표시 | 일치 — snake_case/중첩객체 드리프트 없음 |
-| `items[].publishedAt` | ISO string | `.toISOString()` (166행) | `useRelativeTime(iso: string)` — string 시그니처 일치, NaN 가드 있음 | 일치 |
-| `items[].hasContent` | boolean | `resolveHasContentSet` 2단계 쿼리 | `v-if="item.hasContent"` 내부 링크 분기 | 일치 |
+### 2.1 SQL alias ↔ row 타입 ↔ DTO — 일치 (통과)
 
-- camelCase 일관 ✓, 배열/단수 혼동 없음 ✓, 빈 items에 대한 프론트 빈 상태 문구("No recent articles") 존재 ✓ (§ 9-8 충족)
-- lean select 불변식: `contentHtml/summary/link/imageUrl` 미선택 — 단위 테스트로 고정 (`country-preview-contract.spec.ts`)
-- `enabled: true` 소스 필터 + `publishedAt desc` + `take: limit` — 단위 테스트로 고정
+`server/utils/repositories/articles.ts`:
 
-## 3. 발견 버그 목록
+- `findArticles`/`findLatestAcrossSources` SELECT alias 12종(`id,title,summary,link,imageUrl,publishedAt,hasContent,sourceId,sourceName,sourceCountryCode,sourceTopicSlug,total`) ↔ `ArticleListRawRow(+WithTotal)` 타입(articles.ts:45-60) 1:1 일치. 전부 따옴표 camelCase alias라 PG 소문자 폴딩 없음.
+- `toArticleDTO`(articles.ts:62-78): `publishedAt: row.publishedAt.toISOString()` — Prisma가 TIMESTAMP를 JS Date로 역직렬화하므로 ISO 문자열 변환 유지. `hasContent`는 SQL boolean이 그대로 JS boolean. `summary ?? null`/`imageUrl ?? null` nullable 유지. 윈도우 `total`·flatten 컬럼이 DTO로 누수되지 않음 — `tests/api/articles-repository.spec.ts:123-128`이 키 집합까지 검증.
+- `findRecentByCountry` lean row 6필드 ↔ `CountryPreviewRawRow` ↔ `CountryPreviewArticleDTO` 매핑(articles.ts:179-186) 일치. `tests/api/country-preview-contract.spec.ts:148-150` 키 집합 검증.
+- `COUNT(*)::int`, `COUNT(*) OVER()::int`, `ROUND(...)::float` 등 모든 집계가 int/float로 캐스팅됨 — BigInt/Decimal 직렬화 함정 없음.
+- `types/dto.ts` 무수정 (git diff 대상 아님) — API 계약 동결 준수 확인.
 
-### BUG-1 [Medium] GlobeMap `closeTimer` 언마운트 미정리 → 사후 타이머 체인이 죽은 컴포넌트의 rAF 루프 재시작 가능
-- 위치: `components/GlobeMap.vue:119,143-149` (+ `composables/useGlobeRotation.ts:177-184`)
-- 증상: 팝오버 grace-close 타이머(150ms)가 pending인 상태로 페이지 이탈(언마운트) 시 타이머가 정리되지 않음. 발화하면 `closePreview() → resumeAfterIdle() → scheduleIdleResume()`이 새 idleTimer(5s)를 만들고, 5초 뒤 `startLoop()`이 언마운트된 컴포넌트에서 rAF 루프를 재가동. `useGlobeRotation`의 onUnmounted는 이미 실행된 뒤라(observer 해제됨, inViewport=true 고정) `shouldLoop()`이 계속 true → **무한 rAF 루프 누수**.
-- 재현: 국가 호버 → 포인터를 바다로 이동(scheduleClose 발동) → 150ms 안에 다른 페이지로 라우팅.
-- 담당: **frontend**. 수정안 (둘 다 권장):
-  1. GlobeMap에 `onUnmounted(() => cancelScheduledClose())` 추가.
-  2. 방어선: `useGlobeRotation`에 `disposed` 플래그를 두고 onUnmounted에서 set, `startLoop`/`scheduleIdleResume`에서 `if (disposed) return` 가드.
+### 2.2 raw SQL 컬럼명 ↔ migration 실제 컬럼 — 전수 대조 일치 (통과)
 
-### BUG-2 [Medium] 키보드 사용자가 팝오버 내부 콘텐츠에 도달 불가 + 팝오버 포커스 중 Escape 미동작 (§ 10 "Escape 닫기" 부분 실패)
-- 위치: `components/GlobeMap.vue:177-179` (`onCountryBlur`), `267행` (`@keydown.escape`는 svg에만), `336-337행` (popoverHovered는 pointerenter로만 set)
-- 증상 1: Tab으로 마지막 국가 path에서 팝오버의 NuxtLink로 포커스 이동 시 blur → `scheduleClose()` 발동, `popoverHovered`(포인터 전용)가 false라 150ms 뒤 팝오버가 **포커스를 머금은 채 닫힘**. 기사 링크/"View all" 버튼을 키보드로 활성화 불가.
-- 증상 2: `@keydown.escape`가 svg 요소에만 바인딩 — 포커스가 팝오버 내부(NuxtLink)에 있으면 Escape가 닫지 못함.
-- 완화 요인: 국가 path에서 Enter는 국가 페이지로 정상 이동(계약 § 2-D7 핵심 경로는 동작), 모든 국가는 CountrySelector/Strip으로도 접근 가능.
-- 담당: **frontend**. 수정안: 팝오버 래퍼에 `@focusin="popoverHovered = true; cancelScheduledClose()"`, `@focusout="popoverHovered = false; scheduleClose()"` 추가하고, Escape는 svg가 아닌 외곽 컨테이너 div(또는 popover 자체)에 `@keydown.escape="closePreview"`로 이동.
+`prisma/migrations/20260424054909_/migration.sql` + `20260424134100_article_content_html/migration.sql` 기준:
 
-### BUG-3 [Low] `aria-describedby="globe-preview"`가 팝오버 닫힘 상태에선 존재하지 않는 id 참조
-- 위치: `components/GlobeMap.vue:304`
-- 증상: clickable path 전부가 상시 `aria-describedby`를 가지나 대상 id는 팝오버 오픈 시에만 DOM에 존재. 스크린리더는 무시하므로 실해는 적지만 ARIA 명세 위반. 수정안: `:aria-describedby="previewState?.code === shape.code ? 'globe-preview' : undefined"`.
+| 테이블 | 실제 컬럼(따옴표 camelCase) | 사용처 | 판정 |
+|---|---|---|---|
+| Article | `id,sourceId,title,summary,link,imageUrl,publishedAt,fetchedAt,contentHtml` | articles.ts(3개 쿼리+upsert), trending.ts, trends.ts | 일치 |
+| Source | `id,countryCode,topicSlug,name,feedUrl,enabled,…` | 동일 | 일치 |
+| Country | `code,nameEn,nameKo` | trending.ts (`c."code"`, `c."nameEn"`) | 일치 |
 
-### BUG-4 [Low] `prefers-reduced-motion`을 bind() 시 1회만 평가 — 세션 중 OS 설정 변경 미반영
-- 위치: `composables/useGlobeRotation.ts:286-288`. `matchMedia(...).matches` 스냅샷만 사용, change 리스너 없음. 수정안: `addEventListener('change', ...)` + onUnmounted 해제.
+- **수정 전 채증(정적)**: `git show HEAD:…/trending.ts`·`trends.ts` 모두 비따옴표 snake_case(`a.published_at`, `s.country_code`, `c.name_en` 등) 사용 → PG 소문자 폴딩 시 `column "published_at" does not exist` 확정 — **수정 전 `/api/trending`·`/api/countries/:code/trends`는 실 DB에서 500이었음이 코드상 확실**. 실 DB 500 채증 자체는 DB 부재로 불가(§5).
+- 수정 후: 따옴표 camelCase로 전면 교체. CTE 자체 alias(`today_count`, `total_7d`)는 자기 정의 소문자라 무관. trends.ts의 출력 alias `AS topic / date / count`는 비따옴표 소문자 폴딩 결과가 DTO(`{topic,date,count}`)와 일치. trending DTO alias(`AS "countryCode"` 등)는 따옴표 camelCase로 `TrendingItemDTO`와 일치 — 응답 shape 불변.
+- trending today/baseline CTE 양쪽에 `s."enabled"` 필터 추가 확인(trending.ts:17,28) — 설계 P1-B3 의도 반영.
 
-### BUG-5 [Low] 캐시 히트 경로에서 타 국가의 in-flight 요청을 abort하지 않음
-- 위치: `composables/useCountryPreview.ts:55-59`. A국 fetch 진행 중 B국(캐시 hit) 호버 시 A 요청이 백그라운드에서 완주(결과는 캐시에만 적재, UI 오염 없음 — 테스트로 확인). 네트워크 낭비 1건 수준.
+### 2.3 total 폴백 / totalPages — 정확 (통과)
 
-### BUG-6 [Low] 팝오버 anchor가 오픈 시점 1회만 계산 — 관성 회전 중 호버하면 anchor가 국가 위치와 어긋남
-- 위치: `components/GlobeMap.vue:218-236` (watch가 `previewState.code` 변경 시에만 재계산, rotation 미추적). 드래그 시작 시 팝오버가 닫히므로 실사용 영향 작음. 수정안(선택): watch 소스에 rotation 포함 또는 관성 중 호버 무시.
+- `findArticles`(articles.ts:108-120): `rows.length===0 && page>1`일 때만 `prisma.article.count` 폴백 — where(`source.countryCode/topicSlug/enabled:true`)가 raw WHERE(`s."countryCode"/s."topicSlug"/s."enabled"`)와 의미 동일. page=1 & 0행은 total 0 즉시 반환(쿼리 1회). 정상 경로는 `rows[0]?.total ?? 0`.
+- OFFSET `(page-1)*pageSize` — 단위 테스트가 page=9/pageSize=20 → 160 바인딩까지 검증.
+- `articles.get.ts:73`: `totalPages = Math.ceil(total/pageSize)` — pageSize는 1..50 검증 후라 0 나눗셈 불가. 기존 계산식과 동일.
 
-### BUG-7 [Low/Info] `assets/geo/countries-110m.json` 워킹트리 변경 — 줄바꿈(LF→CRLF) 전용 churn
-- postinstall 복사 스크립트가 Windows에서 재실행되며 발생. 내용 변경 없음. 권장: `git checkout -- assets/geo/countries-110m.json` + `.gitattributes`에 `*.json -text` 또는 해당 파일 `binary` 지정. 담당: backend/chore.
+### 2.4 404 계약 — 유지 (통과)
 
-### BUG-8 [Info] 자동 회전 λ 누적 무한 증가 (모듈로 없음)
-- `useGlobeRotation.ts:145`. d3는 임의 각도를 수용하므로 기능 문제 없음. 수 시간 연속 구동 시 부동소수 정밀도만 이론상 저하. 조치 불요(기록만).
+- `articles.get.ts:56-71` / `preview.get.ts:43-58`: `Promise.all([존재성, 본쿼리])` 후 `!exists`/`!country`를 **먼저** 판정해 404 throw — 본 쿼리 결과는 폐기. 응답 envelope(`data:{statusCode,statusMessage,message}`) 기존과 동일.
+- 입력 검증 400은 Promise.all **이전** 선행 — 순서 보존.
+- malformed article id: `/api/articles/:id` 및 `findArticleById`는 이번 미수정 — contentHtml NULL → null → 404 계약 유지(코드 확인).
+- 관찰(버그 아님): DB 장애 + 미등록 국가 동시 발생 시 Promise.all이 본 쿼리 rejection을 먼저 전파해 404 대신 500이 날 수 있음 — 설계 D3의 의도된 트레이드오프 범위로 판단(§6-O1).
 
-## 4. 작성한 테스트 + 실행 결과
+### 2.5 프론트 `$fetch` 전환 — 회귀 없음 (통과, Minor-1)
 
-| 파일 | 테스트 수 | 내용 |
-|------|-----------|------|
-| `tests/unit/country-preview.spec.ts` | 12 | 디바운스(250ms 미만 0회/타이머 교체/close 취소), openImmediate 무디바운스, 캐시 TTL 5분(히트 0회/만료 재요청), in-flight dedupe(동일 code 1요청), abort(close/국가 전환), 에러 표면화 + 에러 미캐시 |
-| `tests/api/country-preview-contract.spec.ts` | 10 | parseLimit/code 검증 미러(기본 3, 1~5, 소수/0/6/배열 → 400, 소문자 정규화), **실제 `findRecentByCountry` 코드**를 prisma mock으로 구동: DTO 키 정확 일치, Date→ISO, hasContent 파생, lean select(contentHtml 등 미선택), enabled+desc+take, 0건 시 단일 쿼리 |
-| `tests/unit/globe-rotation.spec.ts` | 8 | 초기 회전 결정성([0,-15,0], 입력 배열 비공유), rotateTo φ ±80 클램프 + γ=0 강제, hasInteracted 후 no-op, 관성 감쇠 모델 드리프트 가드(유한 종료, 40px/f → ≤150프레임) |
+- `stores/articles.ts:74-84`: `$fetch<ArticlesResponseDTO>('/api/articles',{query})` — query 구성(country 대문자화/topic/page/pageSize 조건부) 기존과 동일. FRESH_MS(2분) 캐시(:58-59)·`currentKey` 갱신 로직 무변경. `stores/countries.ts:54` 동일 패턴.
+- try/catch 에러 추출 로직은 diff상 무변경(동일 코드 유지)이나, **추출 대상이 잘못된 계층**임을 런타임으로 확인(Minor-1, §6).
 
-실행 결과 (`pnpm test`): **14 files / 101 tests — 전부 통과** (신규 30 포함, 기존 71 회귀 무손상).
+### 2.6 useAsyncData 키/watch/SSR 직렬화 — 정상 (통과)
 
-테스트 분리 한계 (리포트 기록 의무 사항):
-- `preview.get.ts`의 `parseLimit`/`ISO_ALPHA2`는 미export → 핸들러 직접 테스트 불가, 기존 `trending-spikeratio.spec.ts` 스타일의 미러 구현으로 대체(드리프트 가드).
-- `useGlobeRotation`의 `clampPhi`/관성 상수 미export, rAF 루프·포인터 핸들러·4중 정지 조건은 DOM 필수 → 공개 API(rotateTo/pause)로 검증 가능한 범위만 단위화, 나머지는 § 10 수동 항목.
-- `useGlobeProjection`은 topojson 동적 import + d3 의존이라 node 단위 테스트 비용 대비 가치 낮아 정적 검증으로 대체.
+Nuxt **3.21.2** 설치본 소스(`node_modules/nuxt/dist/app/composables/asyncData.js`)로 직접 검증:
 
-## 5. 회귀 검증
+- **하이드레이션 중복 패칭 차단**: 기본 `getCachedData`는 `isHydrating`일 때만 `payload.data[key]` 반환(:454-457) → SSR이 넣은 boolean payload가 클라이언트 첫 로드의 핸들러 재실행을 막음. 기사 데이터 자체는 `@pinia/nuxt`(nuxt.config.ts:15 등록 확인) 스토어 직렬화로 전달 — `currentKey`까지 함께 직렬화되므로 표시 일관성 유지.
+- **뒤로가기/재방문 시 stale 위험 없음**: 언마운트 시 `_deps→0`이면 `purgeCachedData`로 payload/`_asyncData` 엔트리 퍼지(:440) + 하이드레이션 이후 `getCachedData`가 undefined 반환 → 재마운트 시 핸들러 재실행 → `store.load`가 `currentKey`를 올바르게 재설정. (핸들러 스킵 시 `currentKey`가 직전 페이지를 가리키는 시나리오를 의심했으나 소스 확인 결과 발생하지 않음.)
+- **watch 배선**: `watch:[country,topic,page]` — watch 트리거 execute는 cause≠initial이라 캐시 체크를 건너뛰고 항상 핸들러 실행 → 페이지네이션(?page=) 같은 컴포넌트 재사용 내비게이션에서 재로드 보장. fresh 페이지는 store가 fetch 생략.
+- **키 설계**: `articles:{C}:{T}:{P}` 초기 파라미터 기반 정적 키 — [topic].vue는 path 파라미터 변경 시 페이지 컴포넌트가 재생성되므로 키 충돌 없음. `useArticles` 호출처는 [topic].vue 1곳뿐(전수 grep). `country-header-*`/`countries-hydrate*`/`country-meta-*` 키들은 전부 멱등 핸들러(fetchIfStale)라 캐시 스킵에도 안전.
+- **[topic].vue 병렬화**: `useAsyncData`(non-await)와 `useArticles().asyncData`를 `await Promise.all`(:50) — SSR = max(countries, articles), 404 체크는 Promise.all 이후(:54). `index.vue`는 `useHomeFeatured()`(non-lazy useFetch, `onServerPrefetch` 자동 등록)를 countries await 앞으로 이동 — SSR HTML에 featured 포함 유지하면서 병렬. `article/[id].vue` countries는 `{server:false, lazy:true}` 논블로킹 — SSR/클라이언트 초기 상태 모두 코드 폴백이라 하이드레이션 미스매치 없음.
 
-| 명령 | 결과 |
-|------|------|
-| `pnpm test` | ✅ 101/101 |
-| `pnpm typecheck` | ✅ exit 0 |
-| `pnpm lint` | ✅ 0 errors (warning 1건은 기존재 `ArticleContent.vue` vue/no-v-html) |
+### 2.7 SQL 인젝션 — 안전 (통과)
 
-참고: QA가 처음 작성한 테스트에서 lint 오류(import/first) 1건과 typecheck 오류(vi.spyOn 제네릭) 1건이 나와 **QA 테스트 코드 측에서** 수정 후 전체 녹색 확인. 프로덕션 코드는 무수정.
+- 4개 raw 쿼리(findArticles/findLatestAcrossSources/findRecentByCountry/findTrends) + upsertArticle 모두 `prisma.$queryRaw` **태그드 템플릿** — 모든 사용자 유래 값(country, topic, pageSize, offset, limit, since)이 플레이스홀더 바인딩. 문자열 연결/`$queryRawUnsafe` 사용 없음(전수 확인). country/topic/limit는 핸들러에서 정규식·화이트리스트 선검증까지 이중 방어. 단위 테스트가 바인딩 파라미터 배열을 직접 검증(articles-repository.spec.ts:145,187 / country-preview-contract.spec.ts:162).
 
-## 6. 미검증 항목 — 사유
+---
 
-- **드래그 프레임 타임(16/33ms), 백그라운드 탭 CPU 0% 수렴, reduced-motion 실동작, 팝오버 경계 플립, 모바일 2-탭, 실 curl(400/404/빈배열/Cache-Control/페이로드<1KB)**: dev 서버 기동에 DATABASE_URL 필요하나 `.env` 부재. 지시("억지로 .env 만들거나 DB 건드리지 말 것")에 따라 미수행. 코드 경로 존재는 전부 정적 확인 완료.
+## 3. B. 자동 검증 실행 결과
 
-## 7. 권장 수정 사항 (오케스트레이터 지시용)
+| 명령 | 결과 | 비고 |
+|---|---|---|
+| `npx nuxt build` | **exit 0** — "✨ Build complete!" (총 5.25 MB / gzip 1.44 MB) | `pnpm build` 전체 스크립트는 `prisma migrate deploy`가 `DATABASE_URL`/`DIRECT_URL`을 요구 — 로컬 `.env` 부재로 실행 불가(코드와 무관한 환경 제약, 양 dev 보고서와 동일 결론) |
+| `pnpm vitest run` | **Test Files 15 passed (15) / Tests 107 passed (107)**, 1.64s | 신규 `articles-repository.spec.ts` 6건, 갱신 `country-preview-contract.spec.ts` 10건 포함 |
+| `pnpm lint` | **0 errors** (warning 1: `components/ArticleContent.vue:12 vue/no-v-html`) | 경고는 이번 변경 무관·기존 존재(서버측 sanitize-html 처리됨) |
+| `pnpm typecheck` | **exit 0** | vue-tsc 에러 0 |
 
-1. **frontend**: BUG-1 — GlobeMap에 `onUnmounted(cancelScheduledClose)` + useGlobeRotation `disposed` 가드 (5분 작업).
-2. **frontend**: BUG-2 — 팝오버 focusin/focusout 처리 + Escape 바인딩 위치 이동 (§ 10 키보드 체크리스트 충족 필요).
-3. **chore**: BUG-7 — geo json 워킹트리 복원 + .gitattributes. 커밋 전 처리 권장(13MB급 파일의 무의미 diff 방지).
-4. BUG-3~6, 8은 다음 이터레이션 백로그로 기록만.
+## 4. C. 런타임 스모크 (부분 수행)
+
+로컬 환경: `.env` 없음, `localhost:5432` ECONNREFUSED → **실 DB 연결 불가**. `npx nuxt dev --port 4173`로 서버 기동 후 DB 비의존 경로만 채증, 종료 완료.
+
+| 요청 | 결과 |
+|---|---|
+| `GET /api/articles?country=USA&topic=politics` | **400**, `data.message: 'Query param "country" must be ISO-3166 alpha-2.'` — envelope 계약 유지 |
+| `GET /api/articles?country=US&topic=nope` | **400**, topic 화이트리스트 메시지 정상 |
+| `GET /api/countries/US/preview?limit=99` | **400**, limit 1..5 메시지 정상 |
+| `GET /api/countries/USA/preview` | **400**, code alpha-2 메시지 정상 |
+| `GET /api/articles?country=US&topic=politics` (유효) | 500 — `Environment variable not found: DATABASE_URL` (환경 제약, 코드 무관) |
+| `GET /api/trending`, `GET /api/home` | 동일 사유 500 — **케이싱 수정의 실 DB 200 채증은 미검증으로 이관(§5)** |
+
+## 5. 미검증 항목 — 실 DB 환경(스테이징/Vercel Preview)에서 수행 필요
+
+1. `/api/trending`·`/api/countries/:code/trends` **200 채증** (P1-B3 최종 근거 — 단위 테스트는 SQL 텍스트만 검증)
+2. `curl /country/US/politics` view-source — SSR HTML 기사 제목 포함 (P1-F2 핵심 목표)
+3. `ArticlesResponseDTO` byte-level shape (items[].hasContent boolean 실값 true/false 케이스, `contentHtml` 필드 부재)
+4. `?page=999` total/totalPages 폴백 실측
+5. `prisma.ts` `log:['query']` 계측 — 요청당 쿼리 수 4→2(articles), 2→1(home), 3→2(preview)
+6. 클라이언트 내비게이션 콘솔에서 `[nuxt]` 컨텍스트 경고 0건 (브라우저 E2E)
+7. 미등록 국가(`/api/articles?country=ZZ&topic=politics`) 실 DB 404 채증
+
+## 6. 발견 버그 / 관찰 목록
+
+**Critical: 0건 / Major: 0건**
+
+| # | 심각도 | 위치 | 내용 | 재현 |
+|---|---|---|---|---|
+| M1 | Minor (기존 결함, 회귀 아님) | `stores/articles.ts:86`, `stores/countries.ts:58` | 에러 메시지 추출 `e.data.message`가 h3 직렬화의 **top-level message(=statusMessage 코드, 예: "BAD_REQUEST"/"NOT_FOUND")**를 집음. 사람이 읽을 메시지는 `e.data.data.message`에 있음(§4 런타임 채증으로 확인). UI 에러 문구가 "NOT_FOUND" 같은 코드로 표시됨. `01_frontend_done.md` 주의점 5의 "서버 에러 envelope `{message}` 우선 추출" 설명은 부정확 | 미등록 국가로 `/country/ZZ/politics` 접근 후 store.error 확인 |
+| M2 | Minor (설계 확인 필요 → architect 에스컬레이션) | `server/utils/repositories/trends.ts:19-29` | `s."enabled"` 필터 부재 — 비활성 소스 기사가 trends 차트에 집계됨. trending에는 추가됐으나 trends는 설계 P1-B3가 명시하지 않아 backend-dev가 의도적으로 보류(02_backend_done #5). 일관성 판단 필요 | 비활성 소스 보유 국가의 `/country/:code/trends` 집계 비교 |
+| O1 | 관찰 (조치 불필요) | `server/api/articles.get.ts:56`, `preview.get.ts:43` | DB 장애 시 미등록 국가 요청이 404 대신 500이 될 수 있음(Promise.all rejection 선전파). 정상 DB에서는 계약 동일 — 설계 D3 트레이드오프 범위 | DB 다운 상태에서 미등록 국가 요청 |
+| O2 | 관찰 (기존, 무해) | `stores/articles.ts:36-38` | `makeKey`에 pageSize 미포함 — 같은 (country,topic,page)에 다른 pageSize 요청 시 캐시 충돌. 현재 앱은 pageSize 20 단일 사용이라 실영향 없음 | 코드 리뷰 |
+
+## 7. 성능 개선 확인 (코드 근거)
+
+| 경로 | Before | After | 근거 |
+|---|---|---|---|
+| `GET /api/articles` | 직렬 3단계 ≈ 4쿼리 (countryExists → count∥findMany → hasContent PK-IN) | **병렬 1단계 2쿼리, 직렬 의존 0** (countryExists ∥ 단일 raw + `COUNT(*) OVER()`) | articles.get.ts:56-59, articles.ts:91-106 |
+| `GET /api/home` | 2단계 2쿼리 | **1단계 1쿼리** (hasContent 인라인) | articles.ts:131-143, home.get.ts:11 |
+| `GET /api/countries/:code/preview` | 직렬 3단계 3쿼리 | **병렬 1단계 2쿼리** | preview.get.ts:43-46, articles.ts:166-177 |
+| `/api/trending`·`/api/…/trends` | 케이싱 불일치로 잠재 500 (HEAD 코드로 확정적) | 가용성 확보 (쿼리 수 불변 1회) + enabled 누수 차단(trending) | trending.ts/trends.ts 전면 camelCase |
+| `/country/:code/:topic` SSR | countries await → articles watch(SSR 포함 미보장) | countries ∥ articles `Promise.all` — SSR=max, **기사 목록 SSR HTML 포함 보장**(useAsyncData await) | [topic].vue:37-50 |
+| `/` SSR | countries → featured 직렬 | featured 선호출로 병렬 (onServerPrefetch 유지) | index.vue:25-31 |
+| `/article/:id` SSR | detail → countries 직렬 (countries 렌더 블로킹) | countries `{server:false,lazy:true}` 논블로킹 — SSR=detail 1회분 | [id].vue:37-44 |
+| 구조 | Pinia action 내 `useFetch` (컨텍스트 상실 위험) | `$fetch` + 페이지/composable 레벨 `useAsyncData` 래퍼 | stores/*.ts, useArticles.ts:53-66 |
+
+불변식 유지: 목록 쿼리에서 `contentHtml` 본문 비선택(`IS NOT NULL` 단일 언급 — 테스트로 고정), TOAST 본문 미접근. 인덱스 추가/마이그레이션 없음(설계 §1.2 그대로).
+
+## 8. 결론
+
+- **Critical/Major 버그 없음. 코드 레벨 검증·자동 검증 전부 통과 → PASS.**
+- 단, §5의 실 DB 스모크 7항목(특히 trending 200, SSR HTML 채증)은 DB 자격증명이 있는 환경에서 머지 전후 수행을 권장한다.
+- M1(에러 메시지 계층)·M2(trends enabled 필터)는 후속 이터레이션 백로그로 오케스트레이터에 전달.

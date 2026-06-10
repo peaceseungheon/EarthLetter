@@ -11,20 +11,22 @@ export async function findTrends(
 ): Promise<TrendDataPointDTO[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
+  // Quoted camelCase identifiers — matches the migration's actual column
+  // names (unquoted snake_case would fold to lowercase and fail).
   const rows = await prisma.$queryRaw<
     Array<{ topic: string; date: string; count: number }>
   >`
     SELECT
-      s.topic_slug                                              AS topic,
-      TO_CHAR(a.published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
-      COUNT(*)::int                                             AS count
+      s."topicSlug"                                              AS topic,
+      TO_CHAR(a."publishedAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
+      COUNT(*)::int                                              AS count
     FROM   "Article" a
-    JOIN   "Source"  s ON a.source_id = s.id
-    WHERE  s.country_code = ${countryCode}
-      AND  a.published_at >= ${since}
-    GROUP  BY s.topic_slug,
-              TO_CHAR(a.published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')
-    ORDER  BY date ASC, s.topic_slug ASC
+    JOIN   "Source"  s ON a."sourceId" = s."id"
+    WHERE  s."countryCode" = ${countryCode}
+      AND  a."publishedAt" >= ${since}
+    GROUP  BY s."topicSlug",
+              TO_CHAR(a."publishedAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD')
+    ORDER  BY date ASC, s."topicSlug" ASC
   `
 
   return rows

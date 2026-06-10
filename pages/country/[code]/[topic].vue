@@ -22,18 +22,6 @@ if (!isTopicSlug(rawTopic)) {
 
 const topic = rawTopic as TopicSlug
 
-const countriesStore = useCountriesStore()
-await useAsyncData(`country-header-${rawCode}`, async () => {
-  await countriesStore.fetchIfStale()
-  return true
-})
-
-const country = computed(() => countriesStore.byCode(rawCode))
-
-if (!country.value) {
-  throw createError({ statusCode: 404, statusMessage: 'NOT_FOUND' })
-}
-
 const pageParam = computed(() => {
   const raw = Number(route.query.page ?? 1)
   return Number.isInteger(raw) && raw >= 1 ? raw : 1
@@ -42,12 +30,30 @@ const pageParam = computed(() => {
 const codeRef = computed(() => rawCode)
 const topicRef = computed(() => topic)
 
-const { items, total, totalPages, loading, error } = useArticles({
-  country: codeRef,
-  topic: topicRef,
-  page: pageParam,
-  pageSize: 20
+// Kick off countries + articles immediately, then await them together:
+// SSR time becomes max(countries, articles) instead of the sum, and the
+// article list is guaranteed to be in the SSR HTML (architecture P1-F2).
+const countriesStore = useCountriesStore()
+const countriesReady = useAsyncData(`country-header-${rawCode}`, async () => {
+  await countriesStore.fetchIfStale()
+  return true
 })
+
+const { items, total, totalPages, loading, error, asyncData: articlesReady } =
+  useArticles({
+    country: codeRef,
+    topic: topicRef,
+    page: pageParam,
+    pageSize: 20
+  })
+
+await Promise.all([countriesReady, articlesReady])
+
+const country = computed(() => countriesStore.byCode(rawCode))
+
+if (!country.value) {
+  throw createError({ statusCode: 404, statusMessage: 'NOT_FOUND' })
+}
 
 const topicMeta = computed(() => TOPIC_META[topic])
 

@@ -8,8 +8,16 @@
 //   1. LIST queries (findArticles, findLatestAcrossSources) MUST NOT select
 //      `contentHtml`. See architecture § 2.4–2.5. The HTML body is TEXT /
 //      TOAST-stored and would bloat the JSON response.
-//   2. `hasContent` is derived at query time via a second PK-IN query rather
-//      than a denormalized column, so there's a single source of truth.
+//   2. `hasContent` is derived at query time as an inline SQL computed column
+//      (`a."contentHtml" IS NOT NULL`) — the NULL check reads only the main
+//      tuple (no TOAST detoast), so invariant 1 holds and there is a single
+//      source of truth without an extra round trip.
+//
+// Perf iteration (2026-06-10): list queries are single `$queryRaw` statements
+// (camelCase quoted identifiers, same convention as `upsertArticle`).
+// `findArticles` carries `COUNT(*) OVER()::int` so items+total cost one
+// round trip; the separate-count path only runs as a rare fallback when an
+// out-of-range page returns zero rows.
 
 import type { Prisma } from '@prisma/client'
 import type {
@@ -32,139 +40,149 @@ interface FindArticlesResult {
   total: number
 }
 
-// Shape returned by our lean list-query `select` — excludes contentHtml.
-type ArticleListRow = {
+// Row shape of the single-query article list (raw SQL, flattened join).
+// `contentHtml` is never selected — only the inline NULL-check result.
+type ArticleListRawRow = {
   id: string
   title: string
   summary: string | null
   link: string
   imageUrl: string | null
   publishedAt: Date
-  source: {
-    id: number
-    name: string
-    countryCode: string
-    topicSlug: string
-  }
+  hasContent: boolean
+  sourceId: number
+  sourceName: string
+  sourceCountryCode: string
+  sourceTopicSlug: string
 }
 
-function toArticleDTO(a: ArticleListRow, hasContent: boolean): ArticleDTO {
+// findArticles rows additionally carry the windowed total.
+type ArticleListRawRowWithTotal = ArticleListRawRow & { total: number }
+
+function toArticleDTO(row: ArticleListRawRow): ArticleDTO {
   return {
-    id: a.id,
-    title: a.title,
-    summary: a.summary ?? null,
-    link: a.link,
-    imageUrl: a.imageUrl ?? null,
-    publishedAt: a.publishedAt.toISOString(),
-    hasContent,
+    id: row.id,
+    title: row.title,
+    summary: row.summary ?? null,
+    link: row.link,
+    imageUrl: row.imageUrl ?? null,
+    publishedAt: row.publishedAt.toISOString(),
+    hasContent: row.hasContent,
     source: {
-      id: a.source.id,
-      name: a.source.name,
-      countryCode: a.source.countryCode,
-      topicSlug: a.source.topicSlug as TopicSlug
+      id: row.sourceId,
+      name: row.sourceName,
+      countryCode: row.sourceCountryCode,
+      topicSlug: row.sourceTopicSlug as TopicSlug
     }
   }
 }
 
-const LIST_SELECT = {
-  id: true,
-  title: true,
-  summary: true,
-  link: true,
-  imageUrl: true,
-  publishedAt: true,
-  source: {
-    select: { id: true, name: true, countryCode: true, topicSlug: true }
-  }
-} satisfies Prisma.ArticleSelect
-
 /**
- * Resolve `hasContent` for a batch of article ids with one narrow PK-IN query.
- * Returns the set of ids whose `contentHtml` is non-null.
+ * Paginated (country, topic) list — single round trip.
+ * `COUNT(*) OVER()::int` rides along on every row so no separate count query
+ * is needed. Edge case: an out-of-range page (> 1) returns zero rows and
+ * therefore no window total — only then do we fall back to a count query.
  */
-async function resolveHasContentSet(ids: string[]): Promise<Set<string>> {
-  if (ids.length === 0) return new Set()
-  const rows = await prisma.article.findMany({
-    where: { id: { in: ids }, contentHtml: { not: null } },
-    select: { id: true }
-  })
-  return new Set(rows.map((r) => r.id))
-}
-
 export async function findArticles(
   params: FindArticlesParams
 ): Promise<FindArticlesResult> {
   const { country, topic, page, pageSize } = params
-  const where: Prisma.ArticleWhereInput = {
-    source: { countryCode: country, topicSlug: topic, enabled: true }
+
+  const rows = await prisma.$queryRaw<ArticleListRawRowWithTotal[]>`
+    SELECT a."id", a."title", a."summary", a."link", a."imageUrl", a."publishedAt",
+           (a."contentHtml" IS NOT NULL) AS "hasContent",
+           s."id"          AS "sourceId",
+           s."name"        AS "sourceName",
+           s."countryCode" AS "sourceCountryCode",
+           s."topicSlug"   AS "sourceTopicSlug",
+           COUNT(*) OVER()::int AS "total"
+    FROM   "Article" a
+    JOIN   "Source"  s ON s."id" = a."sourceId"
+    WHERE  s."countryCode" = ${country}
+      AND  s."topicSlug"   = ${topic}
+      AND  s."enabled"
+    ORDER  BY a."publishedAt" DESC
+    LIMIT  ${pageSize} OFFSET ${(page - 1) * pageSize}
+  `
+
+  if (rows.length === 0 && page > 1) {
+    // Out-of-range page: the window total never materialized — rare fallback.
+    const where: Prisma.ArticleWhereInput = {
+      source: { countryCode: country, topicSlug: topic, enabled: true }
+    }
+    const total = await prisma.article.count({ where })
+    return { total, items: [] }
   }
 
-  const [total, rows] = await Promise.all([
-    prisma.article.count({ where }),
-    prisma.article.findMany({
-      where,
-      select: LIST_SELECT,
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize
-    })
-  ])
-
-  const hasSet = await resolveHasContentSet(rows.map((r) => r.id))
-
   return {
-    total,
-    items: rows.map((r) => toArticleDTO(r, hasSet.has(r.id)))
+    total: rows[0]?.total ?? 0,
+    items: rows.map(toArticleDTO)
   }
 }
 
 /**
  * Latest-N across every enabled source (home featured strip).
+ * Single round trip — `hasContent` computed inline (invariant 1 holds:
+ * the NULL check never reads the TOAST body).
  */
 export async function findLatestAcrossSources(
   take: number
 ): Promise<ArticleDTO[]> {
-  const rows = await prisma.article.findMany({
-    where: { source: { enabled: true } },
-    select: LIST_SELECT,
-    orderBy: { publishedAt: 'desc' },
-    take
-  })
+  const rows = await prisma.$queryRaw<ArticleListRawRow[]>`
+    SELECT a."id", a."title", a."summary", a."link", a."imageUrl", a."publishedAt",
+           (a."contentHtml" IS NOT NULL) AS "hasContent",
+           s."id"          AS "sourceId",
+           s."name"        AS "sourceName",
+           s."countryCode" AS "sourceCountryCode",
+           s."topicSlug"   AS "sourceTopicSlug"
+    FROM   "Article" a
+    JOIN   "Source"  s ON s."id" = a."sourceId"
+    WHERE  s."enabled"
+    ORDER  BY a."publishedAt" DESC
+    LIMIT  ${take}
+  `
+  return rows.map(toArticleDTO)
+}
 
-  const hasSet = await resolveHasContentSet(rows.map((r) => r.id))
-  return rows.map((r) => toArticleDTO(r, hasSet.has(r.id)))
+// Lean row for the hover-preview query — no summary/link/imageUrl.
+type CountryPreviewRawRow = {
+  id: string
+  title: string
+  publishedAt: Date
+  hasContent: boolean
+  sourceName: string
+  topicSlug: string
 }
 
 /**
  * Latest-N for one country across all topics (hover preview popover).
  * Lean select — no summary/link/imageUrl, never contentHtml (invariant 1).
- * `hasContent` reuses the same two-step PK-IN pattern as the list queries.
+ * Single round trip; `hasContent` computed inline.
  */
 export async function findRecentByCountry(
   country: string,
   limit: number
 ): Promise<CountryPreviewArticleDTO[]> {
-  const rows = await prisma.article.findMany({
-    where: { source: { countryCode: country, enabled: true } },
-    select: {
-      id: true,
-      title: true,
-      publishedAt: true,
-      source: { select: { name: true, topicSlug: true } }
-    },
-    orderBy: { publishedAt: 'desc' },
-    take: limit
-  })
-
-  const hasSet = await resolveHasContentSet(rows.map((r) => r.id))
+  const rows = await prisma.$queryRaw<CountryPreviewRawRow[]>`
+    SELECT a."id", a."title", a."publishedAt",
+           (a."contentHtml" IS NOT NULL) AS "hasContent",
+           s."name"      AS "sourceName",
+           s."topicSlug" AS "topicSlug"
+    FROM   "Article" a
+    JOIN   "Source"  s ON s."id" = a."sourceId"
+    WHERE  s."countryCode" = ${country}
+      AND  s."enabled"
+    ORDER  BY a."publishedAt" DESC
+    LIMIT  ${limit}
+  `
 
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
-    topicSlug: r.source.topicSlug as TopicSlug,
-    sourceName: r.source.name,
+    topicSlug: r.topicSlug as TopicSlug,
+    sourceName: r.sourceName,
     publishedAt: r.publishedAt.toISOString(),
-    hasContent: hasSet.has(r.id)
+    hasContent: r.hasContent
   }))
 }
 

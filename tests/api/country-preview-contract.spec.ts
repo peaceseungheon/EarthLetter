@@ -6,19 +6,32 @@
 //
 // Part B exercises the real findRecentByCountry() DTO mapping with a mocked
 // prisma singleton — verifies field names, publishedAt Date→ISO serialization,
-// hasContent derivation and the lean-select invariant (no contentHtml).
+// inline hasContent derivation and the lean-select invariant (no contentHtml
+// body in the SELECT list — only the `IS NOT NULL` check).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '~/server/utils/prisma'
 import { findRecentByCountry } from '~/server/utils/repositories/articles'
 
 // Hoisted by Vitest above the imports — replaces the prisma singleton before
-// the repository module evaluates.
+// the repository module evaluates. The repository now issues a single
+// $queryRaw tagged-template query (perf iteration 2026-06-10).
 vi.mock('~/server/utils/prisma', () => ({
-  prisma: { article: { findMany: vi.fn() } }
+  prisma: { $queryRaw: vi.fn(), article: { count: vi.fn() } }
 }))
 
-const findMany = prisma.article.findMany as unknown as ReturnType<typeof vi.fn>
+const queryRaw = prisma.$queryRaw as unknown as ReturnType<typeof vi.fn>
+
+/** Reassemble the tagged-template SQL with `?` where values were bound. */
+function sqlOf(call: unknown[]): string {
+  const [strings] = call as [TemplateStringsArray, ...unknown[]]
+  return strings.join('?')
+}
+
+/** Bound parameter values of a tagged-template call (in order). */
+function paramsOf(call: unknown[]): unknown[] {
+  return call.slice(1)
+}
 
 // ---------------------------------------------------------------------------
 // Part A — validation rules re-implemented (drift guard)
@@ -85,26 +98,29 @@ describe('preview handler — country code validation (contract § 5.1)', () => 
 
 describe('findRecentByCountry — CountryPreviewArticleDTO mapping', () => {
   beforeEach(() => {
-    findMany.mockReset()
+    queryRaw.mockReset()
   })
 
+  // Flattened raw rows — hasContent computed inline by the SQL.
   const rowA = {
     id: 'id-a',
     title: 'Korea unveils new budget plan',
     publishedAt: new Date('2026-06-10T02:11:00.000Z'),
-    source: { name: 'Korea Herald Economy', topicSlug: 'economy' }
+    hasContent: true,
+    sourceName: 'Korea Herald Economy',
+    topicSlug: 'economy'
   }
   const rowB = {
     id: 'id-b',
     title: 'Defense talks resume',
     publishedAt: new Date('2026-06-09T23:59:59.500Z'),
-    source: { name: 'Yonhap', topicSlug: 'military' }
+    hasContent: false,
+    sourceName: 'Yonhap',
+    topicSlug: 'military'
   }
 
   it('maps rows to the exact DTO shape with ISO-8601 publishedAt', async () => {
-    findMany
-      .mockResolvedValueOnce([rowA, rowB]) // list query
-      .mockResolvedValueOnce([{ id: 'id-a' }]) // resolveHasContentSet
+    queryRaw.mockResolvedValueOnce([rowA, rowB])
 
     const items = await findRecentByCountry('KR', 3)
 
@@ -135,32 +151,34 @@ describe('findRecentByCountry — CountryPreviewArticleDTO mapping', () => {
   })
 
   it('queries enabled sources for the country, newest first, capped at limit', async () => {
-    findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    queryRaw.mockResolvedValueOnce([])
     await findRecentByCountry('KR', 5)
 
-    const args = findMany.mock.calls[0]![0]
-    expect(args.where).toEqual({ source: { countryCode: 'KR', enabled: true } })
-    expect(args.orderBy).toEqual({ publishedAt: 'desc' })
-    expect(args.take).toBe(5)
+    const sql = sqlOf(queryRaw.mock.calls[0]!)
+    expect(sql).toContain('s."countryCode" = ?')
+    expect(sql).toContain('s."enabled"')
+    expect(sql).toContain('ORDER  BY a."publishedAt" DESC')
+    expect(sql).toContain('LIMIT  ?')
+    expect(paramsOf(queryRaw.mock.calls[0]!)).toEqual(['KR', 5])
   })
 
-  it('lean select — never selects contentHtml/summary/link/imageUrl (invariant § 2.4)', async () => {
-    findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+  it('lean select — never selects the contentHtml body (invariant § 2.4)', async () => {
+    queryRaw.mockResolvedValueOnce([])
     await findRecentByCountry('KR', 3)
 
-    const select = findMany.mock.calls[0]![0].select
-    expect(select.contentHtml).toBeUndefined()
-    expect(select.summary).toBeUndefined()
-    expect(select.link).toBeUndefined()
-    expect(select.imageUrl).toBeUndefined()
-    expect(select).toMatchObject({ id: true, title: true, publishedAt: true })
+    const sql = sqlOf(queryRaw.mock.calls[0]!)
+    // hasContent is the inline NULL check — the body itself is never selected.
+    expect(sql).toContain('(a."contentHtml" IS NOT NULL) AS "hasContent"')
+    expect(sql.split('"contentHtml"')).toHaveLength(2) // exactly one mention
+    expect(sql).not.toContain('"summary"')
+    expect(sql).not.toContain('"link"')
+    expect(sql).not.toContain('"imageUrl"')
   })
 
-  it('returns [] for zero rows and skips the hasContent query (200-empty case)', async () => {
-    findMany.mockResolvedValueOnce([])
+  it('returns [] for zero rows with a single DB round trip (200-empty case)', async () => {
+    queryRaw.mockResolvedValueOnce([])
     const items = await findRecentByCountry('KR', 3)
     expect(items).toEqual([])
-    // resolveHasContentSet early-returns on empty ids — single DB round trip.
-    expect(findMany).toHaveBeenCalledTimes(1)
+    expect(queryRaw).toHaveBeenCalledTimes(1)
   })
 })

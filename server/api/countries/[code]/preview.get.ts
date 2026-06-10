@@ -38,7 +38,13 @@ export default defineEventHandler(async (event): Promise<CountryPreviewResponseD
     throw bad(`Query param "limit" must be an integer between 1 and ${MAX_LIMIT}.`)
   }
 
-  const country = await findCountryByCode(rawCode)
+  // Existence check (404 contract) and the preview query are independent —
+  // run them in parallel to save one sequential DB round trip (arch § 2-D3).
+  const [country, items] = await Promise.all([
+    findCountryByCode(rawCode),
+    findRecentByCountry(rawCode, limit)
+  ])
+
   if (!country) {
     throw createError({
       statusCode: 404,
@@ -51,7 +57,6 @@ export default defineEventHandler(async (event): Promise<CountryPreviewResponseD
     })
   }
 
-  const items = await findRecentByCountry(rawCode, limit)
 
   setResponseHeader(event, 'Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900')
 

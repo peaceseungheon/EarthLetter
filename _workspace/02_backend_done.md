@@ -1,68 +1,68 @@
-# 02_backend_done.md — 이터레이션 8 백엔드 구현 완료 보고
+# 02_backend_done — 기사 조회 성능 개선 (backend-dev)
 
-> 작성: Backend Dev Agent / 2026-06-10
-> 기준 문서: `_workspace/00_architecture.md` § 5, § 7
+> 작성: backend-dev / 2026-06-10
+> 기준 설계: `_workspace/00_architecture.md` § 5 backend-dev 작업 목록 (P0-B1, P0-B2, P1-B3)
+> 커밋: 미수행 (오케스트레이터가 QA 후 처리)
 
----
+## 1. 변경 파일 목록
 
-## 1. 구현 엔드포인트
+| 파일 | 작업 | 내용 |
+|---|---|---|
+| `server/utils/repositories/articles.ts` | P0-B1/B2 | `findArticles`·`findLatestAcrossSources`·`findRecentByCountry`를 `$queryRaw` 단일 쿼리로 재작성, `resolveHasContentSet`·`LIST_SELECT` 삭제 |
+| `server/api/articles.get.ts` | P0-B1 | `countryExists` ∥ `findArticles` `Promise.all` 병렬화 (404 계약 유지) |
+| `server/api/countries/[code]/preview.get.ts` | P0-B2 | `findCountryByCode` ∥ `findRecentByCountry` `Promise.all` 병렬화 (404 계약 유지) |
+| `server/utils/repositories/trending.ts` | P1-B3 | snake_case → 따옴표 camelCase 전면 교체 + `s."enabled"` 필터 추가 (today/baseline CTE 양쪽) |
+| `server/utils/repositories/trends.ts` | P1-B3 | snake_case → 따옴표 camelCase 전면 교체 |
+| `tests/api/country-preview-contract.spec.ts` | 테스트 갱신 | Part B를 `$queryRaw` 모킹으로 재작성 (DTO shape·ISO 직렬화·hasContent·lean-SQL 불변식·단일 왕복) |
+| `tests/api/articles-repository.spec.ts` | **신규** | `findArticles`/`findLatestAcrossSources` 단위 테스트 — DTO shape, hasContent true/false, 윈도우 total, count 폴백, contentHtml 비선택 불변식 |
 
-### `GET /api/countries/[code]/preview` [신규]
+## 2. 변경 요지
 
-파일: `server/api/countries/[code]/preview.get.ts`
+### P0-B1 — `findArticles` 단일 쿼리화
+- 설계 § 3 SQL 그대로: JOIN + `(a."contentHtml" IS NOT NULL) AS "hasContent"` 인라인 + `COUNT(*) OVER()::int AS "total"` 동봉. 파라미터는 전부 태그드 템플릿 바인딩(인젝션 안전).
+- row 타입 명시 제네릭(`ArticleListRawRowWithTotal`) 선언, DTO 매퍼 `toArticleDTO`에서 `publishedAt.toISOString()` 유지.
+- **폴백(설계 § 2-D2 명시)**: `rows.length === 0 && page > 1`일 때만 `prisma.article.count` 1회. page=1 & 0행은 total 0으로 즉시 반환(쿼리 1회 유지).
+- `articles.get.ts`: 입력 검증(400)은 기존 그대로 선행 → 존재성 체크와 본 쿼리만 `Promise.all`. 미등록 국가면 본 쿼리 결과를 버리고 404 (응답 계약 byte-level 동일).
 
-| 케이스 | 상태 | 동작 |
-|--------|------|------|
-| 정상 | 200 | `CountryPreviewResponseDTO` 반환 (`countryCode`, `countryName`, `items`) |
-| `code` 형식 위반 (`/^[A-Z]{2}$/` 불일치, upper 후 검증) | 400 | `ApiErrorDTO` — `statusMessage: 'BAD_REQUEST'` |
-| `limit` 범위 밖 (정수 1~5 외, 소수/0/음수/6+/비숫자) | 400 | `ApiErrorDTO` — `statusMessage: 'BAD_REQUEST'` |
-| `limit` 미지정/빈 문자열 | 200 | 기본값 3 적용 |
-| Country 테이블 미등록 국가 | 404 | `ApiErrorDTO` — `statusMessage: 'NOT_FOUND'` |
-| 등록 국가 + 기사 0건 | 200 | `items: []` (404 아님 — 계약 § 5.1 준수) |
+### P0-B2 — 홈/프리뷰 동일 패턴
+- `findLatestAcrossSources`: 단일 raw 쿼리 (total 불필요, `LIMIT ${take}`).
+- `findRecentByCountry`: lean select(id/title/publishedAt/sourceName/topicSlug + 인라인 hasContent) 단일 raw 쿼리.
+- `resolveHasContentSet` 호출처 소멸 → 함수 삭제. 파일 헤더의 불변식 2 주석을 "인라인 SQL 계산 컬럼" 기준으로 갱신.
+- `preview.get.ts`: `findCountryByCode` ∥ `findRecentByCountry` 병렬화.
 
-- 응답 헤더: `Cache-Control: public, s-maxage=300, stale-while-revalidate=900`
-- 정렬: `publishedAt desc`, 전 토픽 통합, `enabled: true` 소스만
-- 핸들러 반환 타입 `Promise<CountryPreviewResponseDTO>` 명시 (기존 컨벤션)
-- 검증/에러 패턴: `trends.get.ts`의 `bad()` 헬퍼 + 404 블록 복제, `articles.get.ts`의 정수 파싱 방식 답습
+### P1-B3 — trending/trends 케이싱 수정
+- `trending.ts`/`trends.ts`의 비따옴표 snake_case 식별자(`a.published_at`, `s.country_code`, `s.topic_slug`, `a.source_id`, `c.name_en`)를 마이그레이션 실제 컬럼명인 따옴표 camelCase(`a."publishedAt"`, `s."countryCode"`, `s."topicSlug"`, `a."sourceId"`, `c."nameEn"`)로 전면 교체 — `upsertArticle` 컨벤션과 통일. CTE 내부 alias(`today_count`, `total_7d`)는 자체 정의 소문자라 그대로 둠.
+- **trending에 `s."enabled"` 필터 추가** (today/baseline CTE 모두) — 비활성 소스 집계 누수 차단. 응답 DTO alias(`AS "countryCode"` 등)는 기존부터 camelCase라 응답 shape 불변.
 
-## 2. 리포지토리 변경
+## 3. 쿼리 왕복 before → after
 
-### `server/utils/repositories/articles.ts` [수정]
+| 엔드포인트 | before (순차 단계) | after |
+|---|---|---|
+| `GET /api/articles` | 3단계 ≈ 4쿼리 (countryExists → count∥findMany → hasContent PK-IN) | **병렬 1단계, 2쿼리** (countryExists ∥ 단일 raw) — 직렬 의존 0 |
+| `GET /api/home` | 2단계 2쿼리 (findMany → hasContent PK-IN) | **1단계 1쿼리** |
+| `GET /api/countries/:code/preview` | 3단계 3쿼리 (findCountryByCode → findMany → hasContent PK-IN) | **병렬 1단계, 2쿼리** |
+| `GET /api/trending`, `/api/countries/:code/trends` | 케이싱 불일치로 잠재 500 | camelCase 통일로 가용성 확보 (쿼리 수 불변 1회) |
 
-- `findRecentByCountry(country: string, limit: number): Promise<CountryPreviewArticleDTO[]>` 추가
-  - `where: { source: { countryCode, enabled: true } }`, `orderBy: { publishedAt: 'desc' }`, `take: limit`
-  - select 최소화: `id, title, publishedAt, source { name, topicSlug }` — **contentHtml 미선택 불변식 준수**
-  - `hasContent`는 기존 `resolveHasContentSet()` 2단계 PK-IN 쿼리 패턴 재사용
-- 스키마 변경/마이그레이션 **없음**
+## 4. 테스트 결과
 
-### `server/utils/repositories/countries.ts` [수정]
+```
+pnpm vitest run tests/api/articles-repository.spec.ts tests/api/country-preview-contract.spec.ts \
+  tests/api/trending-spikeratio.spec.ts tests/api/trends-validation.spec.ts tests/api/articles-validation.spec.ts
 
-- `findCountryByCode(code): Promise<{ code, nameEn } | null>` 추가 (기존 repo에 단건 조회 함수가 없어 신규)
-  - 핸들러에서 존재 확인 + `countryName` 조회를 1회 쿼리로 처리 (`countryExists` 별도 호출 불필요)
-  - 기존 `countryExists`는 무변경 유지
+Test Files  5 passed (5)
+     Tests  36 passed (36)
+```
 
-## 3. 미구현 항목
+- 신규 `articles-repository.spec.ts` 6건: DTO shape(키 집합까지 검증 — 윈도우 `total`/flatten 컬럼 누수 금지), hasContent true/false, 정상 경로 단일 왕복(count 미호출), page=1 0행(폴백 미발동), page>1 0행 count 폴백(+OFFSET 계산), home 매핑.
+- `country-preview-contract.spec.ts` Part B 4건 갱신: `$queryRaw` 태그드 템플릿 모킹으로 SQL 텍스트·바인딩 파라미터·contentHtml 단일 언급(IS NOT NULL만) 검증.
+- 빌드: `npx nuxt build` 통과 (참고: `pnpm build` 스크립트는 `prisma migrate deploy`+`db seed`가 실 DB를 요구하므로 빌드 단계만 분리 실행).
 
-없음. § 7 범위 전체 구현 완료.
+## 5. qa에게 전달할 주의점
 
-- `types/dto.ts`는 계약대로 **수정하지 않음** (이미 `CountryPreviewArticleDTO`, `CountryPreviewResponseDTO` 존재 — import만 수행)
-- `components/`, `pages/`, `composables/` 일절 미접촉
-
-## 4. frontend에 알릴 변경 사항 (계약 대비 차이)
-
-**없음.** § 5 계약과 100% 일치. 응답 shape, 상태 코드, 캐시 헤더, 기본값/범위 모두 계약 그대로.
-
-참고 사항 1건: 404 판정이 `countryExists` 대신 `findCountryByCode`(동일 의미, nameEn 동시 조회)로 구현됨 — 외부 동작 차이 없음.
-
-## 5. 검증 결과
-
-| 항목 | 결과 |
-|------|------|
-| `pnpm typecheck` | **통과** (에러 0건 — components/pages 포함 전체 통과, frontend 미완성 관련 에러도 현재 없음) |
-| `pnpm lint` | **통과** (에러 0건. 경고 1건은 기존 `components/ArticleContent.vue`의 `vue/no-v-html` — 이번 변경과 무관, 기존부터 존재) |
-| 페이로드 < 1KB | 정적 추산 통과 — 행당 약 200B(title 80자 가정) × 3 + 헤더 ≈ 700B. summary/link/imageUrl/contentHtml 미포함이므로 구조적으로 보장. 런타임 curl 측정은 QA 단계에서 dev 서버 기동 후 수행 권장 |
-| 400/404/200-빈배열 수동 curl | 미수행 (이번 세션에서 dev 서버 미기동 — DB 연결 필요). 코드 경로는 기존 trends/articles 핸들러와 동일 패턴이라 QA 체크리스트(§ 10)에서 일괄 검증 권장 |
-
-### 환경 참고
-
-- `node_modules` 부재 상태였음 → `pnpm install` + `pnpm exec prisma generate` 수행 후 검증 완료 (pnpm 10이 prisma postinstall 스크립트를 차단하므로 fresh clone 시 `prisma generate` 수동 실행 필요)
+1. **응답 shape 동결 확인**: `types/dto.ts` 무수정. `publishedAt`은 매퍼에서 `Date.toISOString()` — raw 쿼리도 Prisma가 TIMESTAMP를 JS Date로 역직렬화하므로 동일. byte-level diff 검증 권장 (§ 6 체크리스트).
+2. **폴백 경로**: 범위 밖 page(예: `?page=999`)에서 `total`/`totalPages`가 정상인지 — 이때만 count 쿼리 1회 추가 발생 (정상 경로 비용 0).
+3. **404 의미 차이 없음, 단 실행 순서 변화**: 미등록 국가 요청 시 본 쿼리가 병렬로 실행되긴 하지만(0행, 인덱스 히트) 응답은 동일하게 404. 쿼리 로그 계측 시 "404인데 Article 쿼리 1회"가 보이는 것은 설계 의도(§ 2-D3).
+4. **trending 동작 변화(의도된 것)**: `s."enabled"` 필터 추가로 비활성 소스 기사가 집계에서 빠짐 → 수정 전후 trending 결과 건수가 달라질 수 있음. 회귀가 아니라 누수 수정.
+5. **trends.ts의 enabled 필터는 추가하지 않음**: 설계 § 3 P1-B3가 trending만 명시. trends(차트)에도 동일 누수가 있는지는 architect 판단 필요 — 후속 검토 항목으로 전달.
+6. **실 DB 검증 필수**: `/api/trending`·`/api/countries/:code/trends`가 수정 전 실 DB에서 500이었는지 채증(§ 6) 후 200 확인. 단위 테스트는 SQL 텍스트만 검증하므로 실 DB 스모크가 최종 근거.
+7. 쿼리 횟수 계측: `server/utils/prisma.ts`에 `log: ['query']` 추가해 요청당 쿼리 수 before/after 채증 (§ 6 첫 항목).

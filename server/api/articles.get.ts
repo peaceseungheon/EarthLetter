@@ -51,7 +51,14 @@ export default defineEventHandler(async (event): Promise<ArticlesResponseDTO> =>
     throw bad('BAD_REQUEST', 'Query param "pageSize" must be between 1 and 50.')
   }
 
-  if (!(await countryExists(country))) {
+  // Existence check (404 contract) and the list query are independent —
+  // run them in parallel to save one sequential DB round trip (arch § 2-D3).
+  const [exists, { items, total }] = await Promise.all([
+    countryExists(country),
+    findArticles({ country, topic, page, pageSize })
+  ])
+
+  if (!exists) {
     throw createError({
       statusCode: 404,
       statusMessage: 'NOT_FOUND',
@@ -63,7 +70,6 @@ export default defineEventHandler(async (event): Promise<ArticlesResponseDTO> =>
     })
   }
 
-  const { items, total } = await findArticles({ country, topic, page, pageSize })
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0
 
   setResponseHeader(event, 'Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900')
