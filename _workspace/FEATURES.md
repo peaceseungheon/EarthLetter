@@ -216,7 +216,8 @@
 | **API 계약** | 전 엔드포인트 응답 shape 불변 (`types/dto.ts` 무수정), 목록에서 `contentHtml` 본문 비선택 불변식 유지 |
 | **DB 변경** | 없음 (인덱스 충분 판정 — `Source(countryCode,topicSlug)`, `Article(sourceId,publishedAt)`, `Article(publishedAt)`) |
 | **신규 테스트** | `tests/api/articles-repository.spec.ts` (6) — SQL 바인딩/DTO shape/hasContent/폴백 검증. `country-preview-contract.spec.ts` 갱신 (10). 전체 107 테스트 통과 |
-| **QA** | Critical/Major 0건 → PASS. Minor 2건 백로그: 스토어 에러 메시지 추출 계층(`e.data.data.message`), trends 쿼리 `enabled` 필터 일관성. 실 DB 스모크 7항목(trending 200, SSR HTML 채증 등)은 배포 환경 검증 권장 (`_workspace/03_qa_report.md` §5) |
+| **QA** | Critical/Major 0건 → PASS. Minor 2건 백로그: 스토어 에러 메시지 추출 계층(`e.data.data.message`), trends 쿼리 `enabled` 필터 일관성. 실 DB 스모크는 Vercel Preview에서 전 항목 통과 — trending 200(구 코드는 500 채증), SSR HTML 기사 제목 20/20 포함, page=999 폴백 정상 (`_workspace/03_qa_report.md` §7.5) |
+| **추가 수정** | `app.vue`의 `<ColorScheme placeholder>` 래퍼 제거 — system 모드는 서버에서 미상이라 SSR이 전 페이지를 빈 `<span>...</span>` 셸로 서빙하던 사이트 전체 기존 결함(SEO 무력화). Preview 스모크 중 발견, 프로덕션 동일 채증 |
 
 ---
 

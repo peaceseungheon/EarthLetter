@@ -145,6 +145,21 @@ Nuxt **3.21.2** 설치본 소스(`node_modules/nuxt/dist/app/composables/asyncDa
 
 불변식 유지: 목록 쿼리에서 `contentHtml` 본문 비선택(`IS NOT NULL` 단일 언급 — 테스트로 고정), TOAST 본문 미접근. 인덱스 추가/마이그레이션 없음(설계 §1.2 그대로).
 
+## 7.5 [추가] Vercel Preview 실 DB 스모크 결과 (2026-06-10, PR #1)
+
+§5로 이관했던 미검증 항목을 Preview 배포(`vercel curl` 바이패스)에서 수행 — **전 항목 통과**:
+
+| 항목 | 결과 |
+|---|---|
+| `/api/trending` | **200, items 15** (구 코드 프로덕션 배포에서 500 채증 — P1-B3 수정 가치 실증) |
+| `/api/articles?country=US&topic=politics` | 200 — total 2945, items 20, `hasContent` boolean, `contentHtml` 부재, `publishedAt` ISO |
+| `?page=999` | 200 — items 0, total 2945, totalPages 148 (count 폴백 정상) |
+| `/api/home` / `/api/countries/US/preview` / `/api/countries/US/trends` | 모두 200 |
+| 미등록 국가 `country=ZZ` | 404, envelope `data.message: 'Country "ZZ" is not registered.'` |
+| `/country/US/politics` SSR HTML | **기사 제목 20/20 포함**, h1·total 렌더링 — 단, 아래 신규 발견 수정 후 |
+
+**신규 Critical 발견·수정 (커밋 2cc328e):** `app.vue`의 `<ColorScheme placeholder="...">` 래퍼가 preference `system`(서버 미상) 시 SSR에서 placeholder만 렌더링 → **모든 페이지가 빈 `<span>...</span>` 셸로 서빙** (프로덕션 동일 채증 — 기존 결함, 본 PR 회귀 아님). SEO 전면 무력화 + 기사 목록 SSR 미포함의 실제 원인. 래퍼 제거로 수정, prerender `/about` 산출물·Preview SSR HTML로 복구 검증.
+
 ## 8. 결론
 
 - **Critical/Major 버그 없음. 코드 레벨 검증·자동 검증 전부 통과 → PASS.**
